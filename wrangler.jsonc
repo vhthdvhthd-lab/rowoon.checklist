@@ -1,0 +1,8 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "rowoon-checklist",
+  "compatibility_date": "2026-08-30",
+  "main": "./worker/index.js",
+  "assets": { "directory": "./dist", "binding": "ASSETS", "not_found_handling": "single-page-application", "run_worker_first": ["/api/*"] },
+  "d1_databases": [{ "binding": "DB", "database_name": "rowoon-checklist-db", "database_id": "D1_DATABASE_ID_REPLACE_ME" }]
+}
