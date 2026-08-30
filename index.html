@@ -40,6 +40,28 @@ scrollbar-width: none;  /* Firefox */
   margin: 15mm 10mm 15mm 10mm;
 }
 @media print {
+  /* 인쇄본은 입력 화면처럼 보이지 않도록 상태와 선택값만 텍스트로 표시 */
+  .print-status-text {
+    background: transparent !important;
+    border: 0 !important;
+    border-radius: 0 !important;
+    color: #000 !important;
+    box-shadow: none !important;
+    padding: 0 !important;
+  }
+  .print-choice-off { display: none !important; }
+  .print-choice-on {
+    background: transparent !important;
+    border: 0 !important;
+    color: #000 !important;
+    box-shadow: none !important;
+    outline: none !important;
+    transform: none !important;
+    padding: 0 !important;
+    min-width: 0 !important;
+    width: auto !important;
+    height: auto !important;
+  }
   html, body {
     width: 100%;
     min-height: 0 !important;
@@ -675,6 +697,7 @@ return saved ? JSON.parse(saved) : {};
 const [sharedReady, setSharedReady] = useState(false);
 const [sharedSyncing, setSharedSyncing] = useState(false);
 const [sharedSyncError, setSharedSyncError] = useState('');
+const [sharedPending, setSharedPending] = useState(false);
 const sharedSkipSaveRef = React.useRef({ settings: true, checklists: true });
 const checklistDirtyRef = React.useRef(false);
 const lastChecklistLocalChangeRef = React.useRef(0);
@@ -728,6 +751,7 @@ useEffect(() => {
       sharedSkipSaveRef.current.settings = !!(remoteSettings && Object.keys(remoteSettings).length);
       sharedSkipSaveRef.current.checklists = !!(remoteChecklists && Object.keys(remoteChecklists).length);
       setSharedReady(true);
+      setSharedPending(false);
       setSharedSyncError('');
     } catch (err) {
       console.error(err);
@@ -747,10 +771,12 @@ useEffect(() => {
     sharedSkipSaveRef.current.settings = false;
     return;
   }
+  setSharedPending(true);
   const timer = setTimeout(async () => {
     try {
       setSharedSyncing(true);
       await sharedPut(SHARED_SETTINGS_KEY, { accounts, facilityInfo, teachers, participants });
+      setSharedPending(false);
       setSharedSyncError('');
     } catch (err) {
       console.error(err);
@@ -767,18 +793,20 @@ useEffect(() => {
     sharedSkipSaveRef.current.checklists = false;
     return;
   }
+  setSharedPending(true);
   const dataToSave = checklistData;
   const timer = setTimeout(async () => {
     try {
       setSharedSyncing(true);
       const scopes = Array.from(dirtyChecklistScopesRef.current);
-      if (!scopes.length) return;
+      if (!scopes.length) { setSharedPending(false); return; }
       await sharedPut(SHARED_CHECKLISTS_KEY, dataToSave, { scopes });
       // 저장 요청이 끝난 뒤 새로 수정된 내용이 없다면 dirty 해제
       if (checklistDataRef.current === dataToSave) {
         checklistDirtyRef.current = false;
         scopes.forEach(scope => dirtyChecklistScopesRef.current.delete(scope));
       }
+      setSharedPending(false);
       setSharedSyncError('');
     } catch (err) {
       console.error(err);
@@ -1575,18 +1603,18 @@ const displayStats = statsView === 'all' ? globalStats : extendedStats;
 
 if (!currentAccount) {
 return (
-<div className="min-h-screen bg-slate-900 text-slate-100 flex items-center justify-center p-4 font-sans">
-<div className="w-full max-w-md bg-slate-800 border border-slate-700 rounded-3xl p-6 sm:p-8 shadow-2xl space-y-6">
+<div className="min-h-screen bg-[#F4F8FF] text-[#172955] flex items-center justify-center p-4 font-sans">
+<div className="w-full max-w-md bg-white border border-slate-200 rounded-3xl p-6 sm:p-8 shadow-2xl space-y-6">
 <div className="text-center space-y-2">
 <div className="w-16 h-16 bg-[#192755] border-2 border-[#FD6D9A] rounded-2xl flex items-center justify-center mx-auto shadow-lg">
 <IconKey className="w-8 h-8 text-[#FD6D9A]" />
 </div>
-<h1 className="text-2xl font-black text-white tracking-tight">{facilityInfo.name}</h1>
-<p className="text-xs text-slate-400 font-medium">개인지원 체크리스트 - 접속 고유번호 입력</p>
+<h1 className="text-2xl font-black text-[#172955] tracking-tight">{facilityInfo.name}</h1>
+<p className="text-xs text-slate-500 font-medium">개인지원 체크리스트 - 접속 고유번호 입력</p>
 </div>
 <form onSubmit={handleLogin} className="space-y-4">
 <div>
-<label className="block text-xs font-bold text-slate-300 mb-1.5 text-center">
+<label className="block text-xs font-bold text-slate-600 mb-1.5 text-center">
 접속 고유번호 입력
 </label>
 <div className="relative">
@@ -1598,7 +1626,7 @@ setInputCode(e.target.value);
 setLoginError('');
 }}
 placeholder="고유번호 입력"
-className="w-full bg-slate-900 border-2 border-slate-700 focus:border-[#FD6D9A] focus:outline-none rounded-2xl py-3 text-center text-2xl font-black tracking-widest text-white transition"
+className="w-full bg-white border-2 border-slate-200 focus:border-[#FC608F] focus:outline-none rounded-2xl py-3 text-center text-2xl font-black tracking-widest text-[#172955] transition"
 maxLength={6}
 autoFocus
 />
@@ -1624,7 +1652,7 @@ className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-w
 key={num}
 type="button"
 onClick={() => handleKeypadPress(String(num))}
-className="bg-slate-700/80 hover:bg-slate-600 active:bg-[#192755] text-white font-black text-xl py-3 rounded-2xl transition border border-slate-600 shadow-xs cursor-pointer"
+className="bg-white hover:bg-pink-50 active:bg-[#FC608F] active:text-white text-[#172955] font-black text-xl py-3 rounded-2xl transition border border-slate-200 shadow-xs cursor-pointer"
 >
 {num}
 </button>
@@ -1632,28 +1660,28 @@ className="bg-slate-700/80 hover:bg-slate-600 active:bg-[#192755] text-white fon
 <button
 type="button"
 onClick={handleKeypadClear}
-className="bg-slate-800 hover:bg-slate-700 text-slate-400 font-bold text-xs py-3 rounded-2xl transition border border-slate-700 cursor-pointer"
+className="bg-slate-100 hover:bg-slate-200 text-slate-500 font-bold text-xs py-3 rounded-2xl transition border border-slate-200 cursor-pointer"
 >
 초기화
 </button>
 <button
 type="button"
 onClick={() => handleKeypadPress('0')}
-className="bg-slate-700/80 hover:bg-slate-600 active:bg-[#192755] text-white font-black text-xl py-3 rounded-2xl transition border border-slate-600 shadow-xs cursor-pointer"
+className="bg-white hover:bg-pink-50 active:bg-[#FC608F] active:text-white text-[#172955] font-black text-xl py-3 rounded-2xl transition border border-slate-200 shadow-xs cursor-pointer"
 >
 0
 </button>
 <button
 type="button"
 onClick={handleKeypadDelete}
-className="bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold text-xs py-3 rounded-2xl transition border border-slate-700 cursor-pointer"
+className="bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold text-xs py-3 rounded-2xl transition border border-slate-200 cursor-pointer"
 >
 지우기
 </button>
 </div>
 <button
 type="submit"
-className="w-full bg-[#FD6D9A] hover:bg-rose-500 text-white font-black py-3.5 rounded-2xl text-base shadow-lg transition flex items-center justify-center gap-2 cursor-pointer"
+className="w-full bg-[#FC608F] hover:bg-[#ef4f80] text-white font-black py-3.5 rounded-2xl text-base shadow-lg transition flex items-center justify-center gap-2 cursor-pointer"
 >
 <IconCheck className="w-5 h-5" />
 로그인 (시스템 접속)
@@ -1672,10 +1700,10 @@ return (
 </div>
 )}
 {sharedSyncError && <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-50 bg-amber-600 text-white px-4 py-2 rounded-xl shadow-xl text-xs font-bold no-print">{sharedSyncError}</div>}
-<header className="bg-[#192755] text-white shadow-lg sticky top-0 z-30 no-print">
+<header className="bg-white text-[#172955] border-b border-slate-200 shadow-sm sticky top-0 z-30 no-print">
 <div className="max-w-7xl mx-auto px-4 py-3 flex flex-wrap items-center justify-between gap-3">
 <div className="flex items-center gap-2">
-<button onClick={goHome} className="px-2.5 py-1.5 bg-white/10 hover:bg-white/20 border border-white/20 rounded-xl text-xs font-extrabold text-white transition cursor-pointer shrink-0" title="홈으로">⌂ 홈</button>
+<button onClick={goHome} className="px-2.5 py-1.5 bg-[#F4F8FF] hover:bg-pink-50 border border-slate-200 rounded-xl text-xs font-extrabold text-[#172955] transition cursor-pointer shrink-0" title="홈으로">⌂ 홈</button>
 <div className="flex items-center gap-3">
 <div>
 <h1 className="font-extrabold text-base sm:text-lg leading-tight tracking-tight flex items-center gap-2">
@@ -1685,10 +1713,13 @@ return (
 </div>
 </div>
 <div className="flex items-center flex-wrap gap-2 text-xs">
-<div className="flex items-center bg-white/10 px-3 py-1.5 rounded-xl border border-white/20 gap-2">
+<div className={`flex items-center px-3 py-1.5 rounded-xl border gap-1.5 font-extrabold ${sharedSyncError ? 'bg-rose-50 border-rose-200 text-rose-600' : sharedSyncing ? 'bg-sky-50 border-sky-200 text-sky-700' : sharedPending ? 'bg-amber-50 border-amber-200 text-amber-700' : 'bg-emerald-50 border-emerald-200 text-emerald-700'}`}>
+<span>{sharedSyncError ? '● 저장 실패' : sharedSyncing ? '● 저장 중…' : sharedPending ? '● 저장 대기' : '● 저장 완료'}</span>
+</div>
+<div className="flex items-center bg-[#F4F8FF] px-3 py-1.5 rounded-xl border border-slate-200 gap-2">
 <IconUserCheck className="w-4 h-4 text-emerald-400" />
 <div className="text-[11px] leading-tight">
-<span className="font-extrabold text-white">{currentAccount.name}</span>
+<span className="font-extrabold text-[#172955]">{currentAccount.name}</span>
 <span className={`ml-1 text-[10px] px-1.5 py-0.2 rounded font-black ${
 currentAccount.role === 'admin' ? 'bg-[#FD6D9A] text-white' : 'bg-sky-600 text-white'
 }`}>
@@ -1697,13 +1728,13 @@ currentAccount.role === 'admin' ? 'bg-[#FD6D9A] text-white' : 'bg-sky-600 text-w
 </div>
 <button
 onClick={handleLogout}
-className="ml-1 p-1 bg-slate-800 hover:bg-rose-600 text-slate-300 hover:text-white rounded-lg transition cursor-pointer"
+className="ml-1 p-1 bg-white hover:bg-rose-100 text-slate-500 hover:text-rose-600 border border-slate-200 rounded-lg transition cursor-pointer"
 title="로그아웃"
 >
 <IconLogOut className="w-3.5 h-3.5" />
 </button>
 </div>
-<div className="flex items-center bg-slate-800/80 px-2.5 py-1.5 rounded-xl border border-slate-700">
+<div className="flex items-center bg-[#F4F8FF] px-2.5 py-1.5 rounded-xl border border-slate-200">
 <IconCalendar className="w-4 h-4 text-[#FD6D9A] mr-1.5" />
 <select
 value={year}
@@ -1716,7 +1747,7 @@ aria-label="연도 선택"
 className="bg-transparent font-extrabold focus:outline-none cursor-pointer"
 >
 {AVAILABLE_YEARS.map(y => (
-<option key={y} value={y} className="bg-slate-800 text-white">{y}년</option>
+<option key={y} value={y}>{y}년</option>
 ))}
 </select>
 <select
@@ -1726,22 +1757,22 @@ aria-label="월 선택"
 className="bg-transparent font-extrabold focus:outline-none cursor-pointer ml-1"
 >
 {getAvailableMonths(year).map(m => (
-<option key={m} value={m} className="bg-slate-800 text-white">{m}월</option>
+<option key={m} value={m}>{m}월</option>
 ))}
 </select>
 </div>
-<div className="flex items-center bg-slate-800/80 px-2.5 py-1.5 rounded-xl border border-slate-700">
+<div className="flex items-center bg-[#F4F8FF] px-2.5 py-1.5 rounded-xl border border-slate-200">
 <IconFilter className="w-4 h-4 text-sky-400 mr-1.5" />
-<span className="text-slate-400 mr-1 hidden sm:inline">담당필터:</span>
+<span className="text-slate-500 mr-1 hidden sm:inline">담당필터:</span>
 <select
 value={teacherFilter}
 onChange={(e) => setTeacherFilter(e.target.value)}
 aria-label="담당 교사 필터"
-className="bg-transparent font-extrabold focus:outline-none cursor-pointer text-sky-300"
+className="bg-transparent font-extrabold focus:outline-none cursor-pointer text-sky-700"
 >
-<option value="전체" className="bg-slate-800 text-white">전체 이용인 보기 ({participants.length}명)</option>
+<option value="전체">전체 이용인 보기 ({participants.length}명)</option>
 {teachers.map(t => (
-<option key={t} value={t} className="bg-slate-800 text-white">
+<option key={t} value={t}>
 {t} 담당 ({participants.filter(p => p.teacher === t).length}명)
 </option>
 ))}
@@ -1761,7 +1792,7 @@ onClick={() => {
 setIsParticipantModalOpen(true);
 }}
 className={`px-3 py-1.5 font-bold rounded-xl flex items-center gap-1 transition cursor-pointer ${
-'bg-slate-700 hover:bg-slate-600 text-white'
+'bg-white hover:bg-slate-50 text-[#172955] border border-slate-200'
 }`}
 title="이용인 및 교사 관리"
 >
@@ -1778,7 +1809,7 @@ title="A4 서식 인쇄"
 </button>
 <button
 onClick={() => setDarkMode(!darkMode)}
-className="p-1.5 bg-slate-800 hover:bg-slate-700 rounded-xl transition text-amber-300 cursor-pointer"
+className="p-1.5 bg-[#F4F8FF] hover:bg-slate-100 border border-slate-200 rounded-xl transition text-amber-500 cursor-pointer"
 title="다크모드 토글"
 >
 {darkMode ? <IconSun className="w-4 h-4" /> : <IconMoon className="w-4 h-4" />}
@@ -1870,54 +1901,54 @@ isSelected
 </div>
 <main className="max-w-7xl mx-auto px-4 pt-4 space-y-4">
 {}
-<div className="bg-gradient-to-r from-[#192755] via-[#233775] to-[#192755] text-white rounded-2xl p-4 sm:p-6 shadow-xl border border-slate-700/50 flex flex-wrap items-center justify-between gap-4 no-print">
+<div className="bg-gradient-to-r from-[#fff1f6] via-white to-[#eef5ff] text-[#172955] rounded-2xl p-4 sm:p-6 shadow-md border border-pink-200 flex flex-wrap items-center justify-between gap-4 no-print">
 <div className="flex items-center gap-4">
 <div>
 <div className="flex items-center gap-3 flex-wrap">
-<span className="text-3xl sm:text-4xl font-black tracking-tight text-white drop-shadow-md">
-{currentParticipant.name} <span className="text-xl sm:text-2xl font-bold text-slate-300">이용인</span>
+<span className="text-3xl sm:text-4xl font-black tracking-tight text-[#172955]">
+{currentParticipant.name} <span className="text-xl sm:text-2xl font-bold text-slate-500">이용인</span>
 </span>
-<div className="flex items-center gap-1.5 bg-white/10 hover:bg-white/20 px-3 py-1.5 rounded-xl text-xs font-bold transition border border-white/20">
-<span className="text-slate-300">담당 교사:</span>
+<div className="flex items-center gap-1.5 bg-white hover:bg-pink-50 px-3 py-1.5 rounded-xl text-xs font-bold transition border border-slate-200">
+<span className="text-slate-500">담당 교사:</span>
 <select
 value={currentParticipant.teacher}
 
 onChange={(e) => handleParticipantTeacherChange(currentParticipant.id, e.target.value)}
 aria-label="현재 이용인 담당 교사 변경"
-className="bg-transparent text-white font-extrabold focus:outline-none cursor-pointer disabled:cursor-default"
+className="bg-transparent text-[#172955] font-extrabold focus:outline-none cursor-pointer disabled:cursor-default"
 >
 {teachers.map(t => (
-<option key={t} value={t} className="bg-slate-800 text-white">{t}</option>
+<option key={t} value={t}>{t}</option>
 ))}
 </select>
 </div>
 </div>
-<p className="text-xs text-slate-300 mt-1.5 flex items-center gap-2">
-<span className="font-bold text-sky-300">{year}년 {month}월 개인지원 기록</span>
+<p className="text-xs text-slate-600 mt-1.5 flex items-center gap-2">
+<span className="font-bold text-[#FC608F]">{year}년 {month}월 개인지원 기록</span>
 <span className="opacity-40">|</span>
-<span className="text-amber-300 font-semibold flex items-center gap-1">
+<span className="text-amber-700 font-semibold flex items-center gap-1">
 <IconClock className="w-3.5 h-3.5" /> 최근수정: {lastModifiedInfo.user} ({lastModifiedInfo.time})
 </span>
 </p>
 </div>
 </div>
 <div className="flex items-center gap-2">
-<div className="flex items-center bg-black/30 p-1 rounded-xl border border-white/10 text-xs font-bold">
+<div className="flex items-center bg-white p-1 rounded-xl border border-slate-200 text-xs font-bold shadow-sm">
 <button
 onClick={() => setViewTab('personal')}
-className={`px-3.5 py-1.5 rounded-lg transition font-extrabold cursor-pointer ${viewTab === 'personal' ? 'bg-[#FD6D9A] text-white shadow-md' : 'text-slate-300 hover:text-white'}`}
+className={`px-3.5 py-1.5 rounded-lg transition font-extrabold cursor-pointer ${viewTab === 'personal' ? 'bg-[#FC608F] text-white shadow-md' : 'text-slate-600 hover:bg-pink-50 hover:text-[#172955]'}`}
 >
 개인선택
 </button>
 <button
 onClick={() => setViewTab('daily')}
-className={`px-3.5 py-1.5 rounded-lg transition font-extrabold cursor-pointer ${viewTab === 'daily' ? 'bg-[#192755] border border-sky-400/50 text-white shadow-md' : 'text-slate-300 hover:text-white'}`}
+className={`px-3.5 py-1.5 rounded-lg transition font-extrabold cursor-pointer ${viewTab === 'daily' ? 'bg-[#172955] text-white shadow-md' : 'text-slate-600 hover:bg-pink-50 hover:text-[#172955]'}`}
 >
 일상생활
 </button>
 <button
 onClick={() => setViewTab('both')}
-className={`px-3.5 py-1.5 rounded-lg transition font-extrabold cursor-pointer ${viewTab === 'both' ? 'bg-sky-600 text-white shadow-md' : 'text-slate-300 hover:text-white'}`}
+className={`px-3.5 py-1.5 rounded-lg transition font-extrabold cursor-pointer ${viewTab === 'both' ? 'bg-sky-600 text-white shadow-md' : 'text-slate-600 hover:bg-pink-50 hover:text-[#172955]'}`}
 >
 나란히 보기
 </button>
@@ -1925,7 +1956,7 @@ className={`px-3.5 py-1.5 rounded-lg transition font-extrabold cursor-pointer ${
 <button
 onClick={() => setHideWeekends(!hideWeekends)}
 className={`px-3 py-1.5 rounded-xl text-xs font-bold transition border cursor-pointer ${
-hideWeekends ? 'bg-emerald-600/30 text-emerald-300 border-emerald-500/40' : 'bg-white/10 text-slate-300 border-white/20'
+hideWeekends ? 'bg-emerald-50 text-emerald-700 border-emerald-300' : 'bg-white text-slate-600 border-slate-200'
 }`}
 >
 {hideWeekends ? '주말 숨김' : '주말 포함'}
@@ -1991,7 +2022,7 @@ d.dayName === '토' ? 'text-blue-600 dark:text-blue-400' : d.dayName === '일' ?
 type="button"
 onClick={() => !holidayName && setOpenStatusDate(openStatusDate === d.dateKey ? null : d.dateKey)}
 aria-label={`${d.day}일 출석 상태 선택`}
-className={`text-[11px] font-black rounded-md px-2 py-1 border transition ${holidayName ? 'cursor-default' : 'cursor-pointer'} ${
+className={`print-status-text text-[11px] font-black rounded-md px-2 py-1 border transition ${holidayName ? 'cursor-default' : 'cursor-pointer'} ${
 displayStatus === '등원'
 ? 'bg-emerald-100 text-emerald-800 border-emerald-300'
 : displayStatus === '결석'
@@ -2041,7 +2072,7 @@ return (
  disabled={isInactive}
  onClick={() => handlePersonalToggle(d.dateKey, act.key)}
  aria-label={`${act.label} ${isChecked ? '선택됨' : '선택 안 됨'}`}
- className={`w-6 h-6 rounded-md font-bold text-xs transition-all flex items-center justify-center mx-auto border cursor-pointer ${
+ className={`${isChecked ? 'print-choice-on' : 'print-choice-off'} w-6 h-6 rounded-md font-bold text-xs transition-all flex items-center justify-center mx-auto border cursor-pointer ${
 isInactive
 ? 'opacity-20 cursor-not-allowed bg-slate-200 border-slate-200 text-slate-400'
 : isChecked
@@ -2158,7 +2189,7 @@ type="button"
 disabled={!!holidayName}
 onClick={() => !holidayName && setOpenStatusDate(openStatusDate === d.dateKey ? null : d.dateKey)}
 aria-label={`${d.day}일 출석 상태 선택`}
-className={`text-[11px] font-black rounded-md px-2 py-1 border transition ${holidayName ? 'cursor-default' : 'cursor-pointer'} ${
+className={`print-status-text text-[11px] font-black rounded-md px-2 py-1 border transition ${holidayName ? 'cursor-default' : 'cursor-pointer'} ${
 displayStatus === '등원'
 ? 'bg-emerald-100 text-emerald-800 border-emerald-300'
 : status === '결석'
@@ -2205,7 +2236,7 @@ option === status ? 'bg-slate-100 dark:bg-slate-700' : ''
 key={lvl}
 disabled={isInactive}
 onClick={() => handleOralChange(d.dateKey, lvl)}
-className={`min-w-[42px] px-3.5 py-1.5 rounded-xl font-black transition-all text-xs border-2 cursor-pointer print:border-none ${
+className={`${oral === lvl ? 'print-choice-on' : 'print-choice-off'} min-w-[42px] px-3.5 py-1.5 rounded-xl font-black transition-all text-xs border-2 cursor-pointer print:border-none ${
 isInactive
 ? 'opacity-20 cursor-not-allowed bg-slate-200 border-slate-200 text-slate-400'
 : oral === lvl
@@ -2225,7 +2256,7 @@ isInactive
 key={lvl}
 disabled={isInactive}
 onClick={() => handleMealChange(d.dateKey, lvl)}
-className={`min-w-[42px] px-3.5 py-1.5 rounded-xl font-black transition-all text-xs border-2 cursor-pointer print:border-none ${
+className={`${meal === lvl ? 'print-choice-on' : 'print-choice-off'} min-w-[42px] px-3.5 py-1.5 rounded-xl font-black transition-all text-xs border-2 cursor-pointer print:border-none ${
 isInactive
 ? 'opacity-20 cursor-not-allowed bg-slate-200 border-slate-200 text-slate-400'
 : meal === lvl
