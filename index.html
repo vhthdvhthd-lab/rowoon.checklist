@@ -339,6 +339,69 @@ input {height: 20px !important;padding: 2px 4px !important;font-size: 9px !impor
 }
 </style>
 
+<style>
+/* 수불대장과 동일한 인쇄 문서 형식 */
+@media print {
+  @page {
+    size: A4 portrait;
+    margin: 15mm 10mm 15mm 10mm;
+    @bottom-right {
+      content: url("/rowoon-center-logo-footer.png");
+      vertical-align: middle;
+    }
+  }
+
+  .print-document-header {
+    display: block !important;
+    margin: 0 0 4mm 0;
+    color: #000;
+  }
+
+  .print-document-title {
+    margin: 2mm 0 3mm;
+    font-size: 18px;
+    line-height: 1.2;
+    font-weight: 900;
+    text-align: center;
+  }
+
+  .print-document-meta {
+    font-size: 11px;
+    line-height: 1.7;
+    font-weight: 700;
+  }
+
+  .print-card-heading {
+    display: none !important;
+  }
+
+  .print-card {
+    width: 100% !important;
+    max-width: 100% !important;
+    border: 0 !important;
+    break-inside: auto !important;
+  }
+
+  .print-card table {
+    break-inside: auto !important;
+  }
+
+  .print-card thead {
+    display: table-header-group !important;
+  }
+
+  .print-card tbody tr {
+    break-inside: avoid !important;
+    page-break-inside: avoid !important;
+  }
+
+  .print-summary,
+  .print-note-area {
+    break-inside: avoid !important;
+  }
+}
+</style>
+
 </head>
 <body class="h-full bg-slate-100 text-slate-800 antialiased selection:bg-rose-500 selection:text-white">
 <div id="root"></div>
@@ -1900,6 +1963,21 @@ isSelected
 </div>
 </div>
 <main className="max-w-7xl mx-auto px-4 pt-4 space-y-4">
+<section className="hidden print-only print-document-header">
+<div>
+<h1 className="print-document-title">
+{viewTab === 'personal'
+? '로운주간이용센터 개인선택활동 체크리스트'
+: viewTab === 'daily'
+? '로운주간이용센터 일상생활지원 체크리스트'
+: '로운주간이용센터 월간 체크리스트'}
+</h1>
+<div className="print-document-meta">
+<div>기간: {year}년 {month}월</div>
+<div>이용인: {currentParticipant.name}</div>
+</div>
+</div>
+</section>
 {}
 <div className="bg-gradient-to-r from-[#fff1f6] via-white to-[#eef5ff] text-[#172955] rounded-2xl p-4 sm:p-6 shadow-md border border-pink-200 flex flex-wrap items-center justify-between gap-4 no-print">
 <div className="flex items-center gap-4">
@@ -1967,7 +2045,7 @@ hideWeekends ? 'bg-emerald-50 text-emerald-700 border-emerald-300' : 'bg-white t
 {}
 {(viewTab === 'personal' || viewTab === 'both') && (
 <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-md border border-slate-200 dark:border-slate-700 overflow-hidden flex flex-col print:border-slate-800 print:shadow-none print:break-inside-avoid print-card">
-<div className="bg-[#192755] text-white px-4 py-2.5 flex items-center justify-between print:bg-slate-200 print:text-black print:px-2 print:py-2.5">
+<div className="bg-[#192755] text-white px-4 py-2.5 flex items-center justify-between print:bg-slate-200 print:text-black print:px-2 print:py-2.5 print-card-heading">
 <div className="flex items-center gap-2">
 <IconCheckSquare className="w-5 h-5 text-[#FD6D9A]" />
 <h2 className="font-extrabold text-base print-title-black">
@@ -2137,7 +2215,7 @@ className="w-full p-2.5 rounded-xl border border-slate-200 dark:border-slate-700
 {}
 {(viewTab === 'daily' || viewTab === 'both') && (
 <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-md border border-slate-200 dark:border-slate-700 overflow-hidden flex flex-col print:border-slate-800 print:shadow-none print:break-inside-avoid print-card">
-<div className="bg-[#192755] text-white px-4 py-2.5 flex items-center justify-between print:bg-slate-200 print:text-black print:px-2 print:py-2.5">
+<div className="bg-[#192755] text-white px-4 py-2.5 flex items-center justify-between print:bg-slate-200 print:text-black print:px-2 print:py-2.5 print-card-heading">
 <div className="flex items-center gap-2">
 <IconCheckSquare className="w-5 h-5 text-sky-400" />
 <h2 className="font-extrabold text-base print-title-black">
