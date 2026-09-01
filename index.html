@@ -344,7 +344,8 @@ input {height: 20px !important;padding: 2px 4px !important;font-size: 9px !impor
 @media print {
   @page {
     size: A4 portrait;
-    margin: 15mm 10mm 15mm 10mm;
+    /* 상단은 서류 펀칭 공간을 고려해 넉넉하게 확보 */
+    margin: 25mm 10mm 15mm 10mm;
     @bottom-right {
       content: url("/rowoon-center-logo-footer.png");
       vertical-align: middle;
@@ -358,7 +359,7 @@ input {height: 20px !important;padding: 2px 4px !important;font-size: 9px !impor
   }
 
   .print-document-title {
-    margin: 2mm 0 3mm;
+    margin: 2mm 0 0;
     font-size: 18px;
     line-height: 1.2;
     font-weight: 900;
@@ -366,9 +367,11 @@ input {height: 20px !important;padding: 2px 4px !important;font-size: 9px !impor
   }
 
   .print-document-meta {
-    font-size: 11px;
-    line-height: 1.7;
+    margin-top: 5mm;
+    font-size: 14px;
+    line-height: 1.4;
     font-weight: 700;
+    text-align: right;
   }
 
   .print-card-heading {
@@ -398,6 +401,141 @@ input {height: 20px !important;padding: 2px 4px !important;font-size: 9px !impor
   .print-summary,
   .print-note-area {
     break-inside: avoid !important;
+  }
+}
+</style>
+
+<style>
+/* 최종 인쇄 전용: 수불대장과 같은 단정한 흑백 서류 형식 */
+@media print {
+  html,
+  body,
+  #root,
+  .app,
+  main {
+    background: #fff !important;
+    color: #000 !important;
+  }
+
+  .print-document-title,
+  .print-document-meta,
+  .print-card,
+  .print-card * {
+    color: #000 !important;
+    -webkit-text-fill-color: #000 !important;
+  }
+
+  .print-card {
+    background: #fff !important;
+    border: 0 !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+  }
+
+  .print-card table {
+    background: #fff !important;
+    border: 0.6px solid #555 !important;
+    border-collapse: collapse !important;
+  }
+
+  .print-card table thead tr,
+  .print-card table thead th {
+    background: #f1f1f1 !important;
+    color: #000 !important;
+  }
+
+  .print-card table tbody tr,
+  .print-card table tbody td {
+    background: #fff !important;
+  }
+
+  /* 활동 체크가 필요 없는 날은 인쇄물에서도 한눈에 구분되도록 표시 */
+  .print-card table tbody tr.print-inactive-row,
+  .print-card table tbody tr.print-inactive-row td {
+    background: #f7f7f7 !important;
+  }
+
+  .print-card th,
+  .print-card td {
+    border: 0.5px solid #666 !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+  }
+
+  .print-status-text,
+  .print-choice-on {
+    display: inline !important;
+    background: transparent !important;
+    color: #000 !important;
+    -webkit-text-fill-color: #000 !important;
+    border: 0 !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+    outline: 0 !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    min-width: 0 !important;
+    width: auto !important;
+    height: auto !important;
+    transform: none !important;
+  }
+
+  .print-choice-off {
+    display: none !important;
+  }
+
+  .print-card input,
+  .print-card textarea,
+  .print-card button {
+    background: transparent !important;
+    color: #000 !important;
+    -webkit-text-fill-color: #000 !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+  }
+
+  .print-card input {
+    border: 0 !important;
+  }
+
+  .print-summary {
+    background: #fff !important;
+    border: 0.5px solid #666 !important;
+    border-top: 0 !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+  }
+
+  .print-summary span {
+    background: transparent !important;
+    border: 0 !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+    padding-left: 0 !important;
+    padding-right: 0 !important;
+  }
+
+  .print-note-area {
+    background: #fff !important;
+    border: 0.5px solid #666 !important;
+    border-top: 0 !important;
+    border-radius: 0 !important;
+  }
+
+  .print-note-area label {
+    color: #000 !important;
+    -webkit-text-fill-color: #000 !important;
+  }
+
+  .print-note-area svg {
+    display: none !important;
+  }
+
+  .print-note-area textarea {
+    background: #fff !important;
+    border: 0.5px solid #888 !important;
+    border-radius: 0 !important;
+    resize: none !important;
   }
 }
 </style>
@@ -699,8 +837,20 @@ const saved = localStorage.getItem('daycare_facility_info');
 return saved ? JSON.parse(saved) : INITIAL_FACILITY_INFO;
 });
 const [currentAccount, setCurrentAccount] = useState(() => {
-const saved = localStorage.getItem('daycare_current_account');
-return saved ? normalizeAccounts([JSON.parse(saved)])[0] : null;
+try {
+  // 같은 컴퓨터·브라우저에서는 마지막 로그인 계정을 계속 기억합니다.
+  const rememberedCode = localStorage.getItem('daycare_remembered_account_code');
+  if (rememberedCode) {
+    const rememberedAccount = accounts.find(account => account.code === rememberedCode);
+    if (rememberedAccount) return rememberedAccount;
+  }
+  // 이전 버전에서 저장한 로그인 정보도 그대로 이어서 사용합니다.
+  const saved = localStorage.getItem('daycare_current_account');
+  return saved ? normalizeAccounts([JSON.parse(saved)])[0] : null;
+} catch (error) {
+  console.warn('저장된 로그인 정보를 불러오지 못했습니다.', error);
+  return null;
+}
 });
 const [inputCode, setInputCode] = useState('');
 const [loginError, setLoginError] = useState('');
@@ -785,8 +935,10 @@ localStorage.setItem('daycare_checklists_v2', JSON.stringify(checklistData));
 useEffect(() => {
 if (currentAccount) {
 localStorage.setItem('daycare_current_account', JSON.stringify(currentAccount));
+localStorage.setItem('daycare_remembered_account_code', currentAccount.code);
 } else {
 localStorage.removeItem('daycare_current_account');
+localStorage.removeItem('daycare_remembered_account_code');
 }
 }, [currentAccount]);
 // 최초 접속: 서버의 공용 데이터를 우선 적용합니다.
@@ -959,6 +1111,8 @@ setLoginError('올바른 접속 고유번호를 입력하세요.');
 }
 };
 const handleLogout = () => {
+localStorage.removeItem('daycare_current_account');
+localStorage.removeItem('daycare_remembered_account_code');
 setCurrentAccount(null);
 setInputCode('');
 setLoginError('');
@@ -1967,14 +2121,13 @@ isSelected
 <div>
 <h1 className="print-document-title">
 {viewTab === 'personal'
-? '로운주간이용센터 개인선택활동 체크리스트'
+? `${month}월 개인선택활동 체크리스트`
 : viewTab === 'daily'
-? '로운주간이용센터 일상생활지원 체크리스트'
-: '로운주간이용센터 월간 체크리스트'}
+? `${month}월 일상생활지원 체크리스트`
+: `${month}월 개인선택활동·일상생활지원 체크리스트`}
 </h1>
 <div className="print-document-meta">
-<div>기간: {year}년 {month}월</div>
-<div>이용인: {currentParticipant.name}</div>
+<div>이름: {currentParticipant.name}</div>
 </div>
 </div>
 </section>
@@ -2086,7 +2239,7 @@ else if (d.isWeekend) rowBg = 'bg-slate-100/70 dark:bg-slate-900/40';
 else if (status === '결석') rowBg = 'bg-rose-50/70 dark:bg-rose-950/30';
 else if (holidayName || status === '미지원' || status === '휴원') rowBg = 'bg-slate-100/60 dark:bg-slate-800/50';
 return (
-<tr key={d.dateKey} className={`${rowBg} ${d.isToday ? "print-today-row" : ""} hover:bg-slate-100/80 dark:hover:bg-slate-700/50 transition h-12`}>
+<tr key={d.dateKey} className={`${rowBg} ${isInactive ? "print-inactive-row" : ""} ${d.isToday ? "print-today-row" : ""} hover:bg-slate-100/80 dark:hover:bg-slate-700/50 transition h-12`}>
 <td className="p-2 text-center font-bold text-sm border-r border-slate-200 dark:border-slate-700 print:border-black print:text-[11px]">
 {d.day}일
 </td>
@@ -2252,7 +2405,7 @@ else if (d.isWeekend) rowBg = 'bg-slate-100/70 dark:bg-slate-900/40';
 else if (status === '결석') rowBg = 'bg-rose-50/70 dark:bg-rose-950/30';
 else if (holidayName || status === '미지원' || status === '휴원') rowBg = 'bg-slate-100/60 dark:bg-slate-800/50';
 return (
-<tr key={d.dateKey} className={`${rowBg} ${d.isToday ? "print-today-row" : ""} hover:bg-slate-100/80 dark:hover:bg-slate-700/50 transition h-12`}>
+<tr key={d.dateKey} className={`${rowBg} ${isInactive ? "print-inactive-row" : ""} ${d.isToday ? "print-today-row" : ""} hover:bg-slate-100/80 dark:hover:bg-slate-700/50 transition h-12`}>
 <td className="p-2 text-center font-bold text-sm border-r border-slate-200 dark:border-slate-700 print:border-black">
 {d.day}일
 </td>
