@@ -385,15 +385,26 @@ input {height: 20px !important;padding: 2px 4px !important;font-size: 9px !impor
     break-inside: auto !important;
   }
 
-  /* 고해상도 원본 로고를 실제 크기만 줄여 모든 인쇄 페이지에 반복 */
-  .print-footer-logo {
+  /* 로고는 각 체크리스트 표가 끝난 직후 오른쪽에 배치 */
+  .print-section-logo {
+    display: flex !important;
+    justify-content: flex-end !important;
+    align-items: center !important;
+    margin-top: 3mm !important;
+    break-inside: avoid !important;
+    page-break-inside: avoid !important;
+  }
+
+  .print-section-logo img {
     display: block !important;
-    position: fixed !important;
-    right: 0 !important;
-    bottom: -10mm !important;
     width: 27mm !important;
     height: auto !important;
-    z-index: 9999 !important;
+  }
+
+  /* 나란히 보기 인쇄 시 두 체크리스트를 각각 한 페이지씩 분리 */
+  .print-card + .print-card {
+    break-before: page !important;
+    page-break-before: always !important;
   }
 
   .print-card table {
@@ -451,13 +462,8 @@ input {height: 20px !important;padding: 2px 4px !important;font-size: 9px !impor
 
   .print-card table thead tr,
   .print-card table thead th {
-    background: #f1f1f1 !important;
-    color: #000 !important;
-  }
-
-  /* 날짜·요일·상태 제목 칸은 연한 하늘색으로 구분 */
-  .print-card table thead th:nth-child(-n+3) {
     background: #eaf5ff !important;
+    color: #000 !important;
   }
 
   .print-card table tbody tr,
@@ -470,6 +476,7 @@ input {height: 20px !important;padding: 2px 4px !important;font-size: 9px !impor
   .print-card table tbody tr.print-inactive-row td {
     background: #f1f1f1 !important;
   }
+
 
   .print-card th,
   .print-card td {
@@ -1977,7 +1984,6 @@ className="w-full bg-[#FC608F] hover:bg-[#ef4f80] text-white font-black py-3.5 r
 }
 return (
 <div className="min-h-screen pb-10 transition-colors duration-200">
-<img className="print-footer-logo hidden" src="/rowoon-center-logo-footer.png" alt="로운주간이용센터 로고" />
 {toastMessage && (
 <div className="fixed top-5 right-5 z-50 bg-[#192755] text-white px-4 py-2.5 rounded-xl shadow-xl flex items-center gap-2 border border-[#FD6D9A] animate-bounce no-print">
 <IconShieldCheck className="w-4 h-4 text-[#FD6D9A]" />
@@ -2185,21 +2191,6 @@ isSelected
 </div>
 </div>
 <main className="max-w-7xl mx-auto px-4 pt-4 space-y-4">
-<section className="hidden print-only print-document-header">
-<div>
-<h1 className="print-document-title">
-{viewTab === 'personal'
-? `${month}월 개인선택활동 체크리스트`
-: viewTab === 'daily'
-? `${month}월 일상생활지원 체크리스트`
-: `${month}월 개인선택활동·일상생활지원 체크리스트`}
-</h1>
-<div className="print-document-meta">
-<div>이름: {currentParticipant.name}</div>
-</div>
-</div>
-</section>
-{}
 <div className="bg-gradient-to-r from-[#fff1f6] via-white to-[#eef5ff] text-[#172955] rounded-2xl p-4 sm:p-6 shadow-md border border-pink-200 flex flex-wrap items-center justify-between gap-4 no-print">
 <div className="flex items-center gap-4">
 <div>
@@ -2266,6 +2257,10 @@ hideWeekends ? 'bg-emerald-50 text-emerald-700 border-emerald-300' : 'bg-white t
 {}
 {(viewTab === 'personal' || viewTab === 'both') && (
 <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-md border border-slate-200 dark:border-slate-700 overflow-hidden flex flex-col print:border-slate-800 print:shadow-none print:break-inside-avoid print-card">
+<section className="hidden print-only print-document-header">
+<h1 className="print-document-title">{month}월 개인선택활동 체크리스트</h1>
+<div className="print-document-meta">이름: {currentParticipant.name}</div>
+</section>
 <div className="bg-[#192755] text-white px-4 py-2.5 flex items-center justify-between print:bg-slate-200 print:text-black print:px-2 print:py-2.5 print-card-heading">
 <div className="flex items-center gap-2">
 <IconCheckSquare className="w-5 h-5 text-[#FD6D9A]" />
@@ -2431,11 +2426,18 @@ placeholder="해당 월의 개인선택활동 관련 종합 특이사항, 진척
 className="w-full p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-xs focus:ring-2 focus:ring-[#192755] focus:outline-none transition resize-y print:border-slate-400 print:placeholder-transparent"
 />
 </div>
+<div className="hidden print-section-logo">
+<img src="/rowoon-center-logo-footer.png" alt="로운주간이용센터 로고" />
+</div>
 </div>
 )}
 {}
 {(viewTab === 'daily' || viewTab === 'both') && (
 <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-md border border-slate-200 dark:border-slate-700 overflow-hidden flex flex-col print:border-slate-800 print:shadow-none print:break-inside-avoid print-card">
+<section className="hidden print-only print-document-header">
+<h1 className="print-document-title">{month}월 일상생활지원 체크리스트</h1>
+<div className="print-document-meta">이름: {currentParticipant.name}</div>
+</section>
 <div className="bg-[#192755] text-white px-4 py-2.5 flex items-center justify-between print:bg-slate-200 print:text-black print:px-2 print:py-2.5 print-card-heading">
 <div className="flex items-center gap-2">
 <IconCheckSquare className="w-5 h-5 text-sky-400" />
@@ -2605,6 +2607,9 @@ onChange={(e) => handleIntegratedNoteChange(e.target.value)}
 placeholder="해당 월의 일상생활지원 관련 종합 특이사항, 관찰 및 지원 내용을 입력하세요..."
 className="w-full p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-xs focus:ring-2 focus:ring-[#192755] focus:outline-none transition resize-y print:border-slate-400 print:placeholder-transparent"
 />
+</div>
+<div className="hidden print-section-logo">
+<img src="/rowoon-center-logo-footer.png" alt="로운주간이용센터 로고" />
 </div>
 </div>
 )}
