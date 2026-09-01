@@ -347,8 +347,7 @@ input {height: 20px !important;padding: 2px 4px !important;font-size: 9px !impor
     /* 상단은 서류 펀칭 공간을 고려해 넉넉하게 확보 */
     margin: 25mm 10mm 15mm 10mm;
     @bottom-right {
-      content: url("/rowoon-center-logo-footer.png");
-      vertical-align: middle;
+      content: "";
     }
   }
 
@@ -379,10 +378,22 @@ input {height: 20px !important;padding: 2px 4px !important;font-size: 9px !impor
   }
 
   .print-card {
-    width: 100% !important;
-    max-width: 100% !important;
+    /* 브라우저·프린터별 인쇄 가능 폭 차이로 오른쪽 선이 잘리지 않도록 여유 확보 */
+    width: calc(100% - 1.5mm) !important;
+    max-width: calc(100% - 1.5mm) !important;
     border: 0 !important;
     break-inside: auto !important;
+  }
+
+  /* 고해상도 원본 로고를 실제 크기만 줄여 모든 인쇄 페이지에 반복 */
+  .print-footer-logo {
+    display: block !important;
+    position: fixed !important;
+    right: 0 !important;
+    bottom: -10mm !important;
+    width: 27mm !important;
+    height: auto !important;
+    z-index: 9999 !important;
   }
 
   .print-card table {
@@ -444,6 +455,11 @@ input {height: 20px !important;padding: 2px 4px !important;font-size: 9px !impor
     color: #000 !important;
   }
 
+  /* 날짜·요일·상태 제목 칸은 연한 하늘색으로 구분 */
+  .print-card table thead th:nth-child(-n+3) {
+    background: #eaf5ff !important;
+  }
+
   .print-card table tbody tr,
   .print-card table tbody td {
     background: #fff !important;
@@ -452,7 +468,7 @@ input {height: 20px !important;padding: 2px 4px !important;font-size: 9px !impor
   /* 활동 체크가 필요 없는 날은 인쇄물에서도 한눈에 구분되도록 표시 */
   .print-card table tbody tr.print-inactive-row,
   .print-card table tbody tr.print-inactive-row td {
-    background: #f7f7f7 !important;
+    background: #f1f1f1 !important;
   }
 
   .print-card th,
@@ -536,6 +552,57 @@ input {height: 20px !important;padding: 2px 4px !important;font-size: 9px !impor
     border: 0.5px solid #888 !important;
     border-radius: 0 !important;
     resize: none !important;
+  }
+
+  /* 비고 및 종합의견 입력 안내 문구는 인쇄물에 표시하지 않음 */
+  .print-card input::placeholder,
+  .print-card textarea::placeholder {
+    color: transparent !important;
+    -webkit-text-fill-color: transparent !important;
+    opacity: 0 !important;
+  }
+
+  /* 일상생활지원은 상·중·하를 모두 보여주고 선택한 단계만 동그라미 표시 */
+  .print-card .print-level-group {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 4mm !important;
+  }
+
+  .print-card .print-level-option {
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    width: 5mm !important;
+    height: 5mm !important;
+    min-width: 5mm !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    color: #000 !important;
+    -webkit-text-fill-color: #000 !important;
+    background: transparent !important;
+    border: 0.5px solid transparent !important;
+    border-radius: 50% !important;
+    font-size: 11px !important;
+    line-height: 1 !important;
+  }
+
+  .print-card .print-level-option.print-level-selected {
+    border-color: #000 !important;
+    font-weight: 900 !important;
+  }
+
+  /* 공휴일·휴원 행도 일반 행과 정확히 같은 높이 유지 */
+  .print-card td.print-holiday-cell {
+    height: 7.2mm !important;
+    padding: 0 !important;
+  }
+
+  .print-card .print-holiday-label {
+    min-height: 0 !important;
+    height: 100% !important;
+    padding: 0 !important;
   }
 }
 </style>
@@ -1910,6 +1977,7 @@ className="w-full bg-[#FC608F] hover:bg-[#ef4f80] text-white font-black py-3.5 r
 }
 return (
 <div className="min-h-screen pb-10 transition-colors duration-200">
+<img className="print-footer-logo hidden" src="/rowoon-center-logo-footer.png" alt="로운주간이용센터 로고" />
 {toastMessage && (
 <div className="fixed top-5 right-5 z-50 bg-[#192755] text-white px-4 py-2.5 rounded-xl shadow-xl flex items-center gap-2 border border-[#FD6D9A] animate-bounce no-print">
 <IconShieldCheck className="w-4 h-4 text-[#FD6D9A]" />
@@ -2288,9 +2356,9 @@ option === status ? 'bg-slate-100 dark:bg-slate-700' : ''
 {holidayName ? (
 <td
 colSpan={PERSONAL_ACTIVITIES.length}
-className="p-1 text-center border-r border-slate-200 dark:border-slate-700 print:border-black bg-slate-50 dark:bg-slate-900/40"
+className="print-holiday-cell p-1 text-center border-r border-slate-200 dark:border-slate-700 print:border-black bg-slate-50 dark:bg-slate-900/40"
 >
-<span className="block w-full font-black text-sm text-slate-700 dark:text-slate-200 print:text-[11px] print:font-extrabold">
+<span className="print-holiday-label flex items-center justify-center w-full font-black text-sm text-slate-700 dark:text-slate-200 print:text-[11px] print:font-extrabold">
 {holidayName}
 </span>
 </td>
@@ -2453,21 +2521,21 @@ option === status ? 'bg-slate-100 dark:bg-slate-700' : ''
 )}
 </td>
 {holidayName ? (
-<td colSpan={2} className="p-2 text-center border-r border-slate-200 dark:border-slate-700 print:border-black">
-<div className="w-full flex items-center justify-center min-h-[38px] px-3 font-black text-sm text-slate-700 dark:text-slate-200 print:text-black print:text-[11px]">
+<td colSpan={2} className="print-holiday-cell p-2 text-center border-r border-slate-200 dark:border-slate-700 print:border-black">
+<div className="print-holiday-label w-full flex items-center justify-center min-h-[38px] px-3 font-black text-sm text-slate-700 dark:text-slate-200 print:text-black print:text-[11px]">
 {holidayName}
 </div>
 </td>
 ) : (
 <>
 <td className="p-2 border-r border-slate-200 dark:border-slate-700 print:border-black">
-<div className="flex items-center justify-center gap-2.5">
+<div className="print-level-group flex items-center justify-center gap-2.5">
 {['상', '중', '하'].map(lvl => (
 <button
 key={lvl}
 disabled={isInactive}
 onClick={() => handleOralChange(d.dateKey, lvl)}
-className={`${oral === lvl ? 'print-choice-on' : 'print-choice-off'} min-w-[42px] px-3.5 py-1.5 rounded-xl font-black transition-all text-xs border-2 cursor-pointer print:border-none ${
+className={`print-level-option ${oral === lvl ? 'print-level-selected' : ''} min-w-[42px] px-3.5 py-1.5 rounded-xl font-black transition-all text-xs border-2 cursor-pointer print:border-none ${
 isInactive
 ? 'opacity-20 cursor-not-allowed bg-slate-200 border-slate-200 text-slate-400'
 : oral === lvl
@@ -2481,13 +2549,13 @@ isInactive
 </div>
 </td>
 <td className="p-2">
-<div className="flex items-center justify-center gap-2.5">
+<div className="print-level-group flex items-center justify-center gap-2.5">
 {['상', '중', '하'].map(lvl => (
 <button
 key={lvl}
 disabled={isInactive}
 onClick={() => handleMealChange(d.dateKey, lvl)}
-className={`${meal === lvl ? 'print-choice-on' : 'print-choice-off'} min-w-[42px] px-3.5 py-1.5 rounded-xl font-black transition-all text-xs border-2 cursor-pointer print:border-none ${
+className={`print-level-option ${meal === lvl ? 'print-level-selected' : ''} min-w-[42px] px-3.5 py-1.5 rounded-xl font-black transition-all text-xs border-2 cursor-pointer print:border-none ${
 isInactive
 ? 'opacity-20 cursor-not-allowed bg-slate-200 border-slate-200 text-slate-400'
 : meal === lvl
