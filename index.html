@@ -628,7 +628,7 @@ const SHARED_SYNC_INTERVAL = 120000;
 const AVAILABLE_YEARS = [2026, 2027, 2028, 2029, 2030];
 const getAvailableMonths = (selectedYear) =>
   selectedYear === 2026
-    ? [9, 10, 11, 12]
+    ? [8, 9, 10, 11, 12]
     : [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
 
 const getInitialYearMonth = () => {
@@ -636,8 +636,8 @@ const getInitialYearMonth = () => {
   const currentYear = now.getFullYear();
   const currentMonth = now.getMonth() + 1;
 
-  if (currentYear < 2026 || (currentYear === 2026 && currentMonth < 9)) {
-    return { year: 2026, month: 9 };
+  if (currentYear < 2026 || (currentYear === 2026 && currentMonth < 8)) {
+    return { year: 2026, month: 8 };
   }
   if (currentYear > 2030 || (currentYear === 2030 && currentMonth > 12)) {
     return { year: 2030, month: 12 };
@@ -946,14 +946,14 @@ const [year, setYear] = useState(initialYearMonth.year);
 const [month, setMonth] = useState(initialYearMonth.month);
 
 useEffect(() => {
+  let observedCalendarMonth = `${initialYearMonth.year}-${initialYearMonth.month}`;
   const syncCurrentMonth = () => {
     const current = getInitialYearMonth();
-    const now = new Date();
-    const actualYear = now.getFullYear();
-    const actualMonth = now.getMonth() + 1;
+    const calendarMonth = `${current.year}-${current.month}`;
 
-    // 2026년 9월 이후에는 월이 바뀌면 자동으로 현재 연/월로 이동
-    if (actualYear >= 2026 && actualYear <= 2030 && actualMonth >= 1) {
+    // 실제 달이 바뀔 때만 이동합니다. 선택한 과거 월은 그대로 유지합니다.
+    if (calendarMonth !== observedCalendarMonth) {
+      observedCalendarMonth = calendarMonth;
       setYear(current.year);
       setMonth(current.month);
     }
@@ -1698,7 +1698,7 @@ overallOperatingDays = Math.max(daysInMonthForStats(monthKey) - closedDays, 0);
 overallAttendanceCapacity = participants.length * overallOperatingDays;
 } else {
 const monthsForScope = statsScope === 'year'
-? Array.from({length: 12}, (_, i) => `${year}-${String(i + 1).padStart(2, '0')}`).filter(mKey => mKey >= '2026-09')
+? Array.from({length: 12}, (_, i) => `${year}-${String(i + 1).padStart(2, '0')}`).filter(mKey => mKey >= '2026-08')
 : Array.from(new Set(participants.flatMap(p => Object.keys(checklistData[p.id] || {}))));
 monthsForScope.forEach(mKey => {
 const baseOperatingDays = daysInMonthForStats(mKey);
@@ -1715,7 +1715,7 @@ let overallPersonalParticipationCount = 0;
 const monthsForPersonalStats = statsScope === 'month'
   ? [monthKey]
   : statsScope === 'year'
-    ? Array.from({length: 12}, (_, i) => `${year}-${String(i + 1).padStart(2, '0')}`).filter(mKey => mKey >= '2026-09')
+    ? Array.from({length: 12}, (_, i) => `${year}-${String(i + 1).padStart(2, '0')}`).filter(mKey => mKey >= '2026-08')
     : Array.from(new Set(participants.flatMap(p => Object.keys(checklistData[p.id] || {}))));
 participants.forEach(p => {
   monthsForPersonalStats.forEach(mKey => {
@@ -1790,7 +1790,7 @@ const globalStats = useMemo(() => {
   const scopeMonths = statsScope === 'month'
     ? [monthKey]
     : statsScope === 'year'
-      ? Array.from({ length: 12 }, (_, i) => `${year}-${String(i + 1).padStart(2, '0')}`).filter(k => k >= '2026-09')
+      ? Array.from({ length: 12 }, (_, i) => `${year}-${String(i + 1).padStart(2, '0')}`).filter(k => k >= '2026-08')
       : Array.from(new Set(participants.flatMap(p => Object.keys(checklistData[p.id] || {}))));
 
   const isInstitutionClosed = (mKey, dateKey) => {
@@ -2032,7 +2032,7 @@ value={year}
 onChange={(e) => {
   const nextYear = Number(e.target.value);
   setYear(nextYear);
-  if (nextYear === 2026 && month < 9) setMonth(9);
+  if (nextYear === 2026 && month < 8) setMonth(8);
 }}
 aria-label="연도 선택"
 className="bg-transparent font-extrabold focus:outline-none cursor-pointer"
@@ -2920,7 +2920,7 @@ className={`px-2 py-1 rounded-lg text-xs transition cursor-pointer ${statsView =
 <select value={year} onChange={(e) => {
   const nextYear = Number(e.target.value);
   setYear(nextYear);
-  if (nextYear === 2026 && month < 9) setMonth(9);
+  if (nextYear === 2026 && month < 8) setMonth(8);
 }} className="bg-transparent font-extrabold focus:outline-none cursor-pointer">
 {AVAILABLE_YEARS.map(y => <option key={y} value={y}>{y}년</option>)}
 </select>
