@@ -616,12 +616,14 @@ input {height: 20px !important;padding: 2px 4px !important;font-size: 9px !impor
 
 <style>
 /* 두 표는 동일한 날짜/요일/상태/비고 폭을 사용합니다. */
+@media print {
 .personal-table thead th:nth-child(1), .daily-table thead th:nth-child(1) { width: 40px !important; }
 .personal-table thead th:nth-child(2), .daily-table thead th:nth-child(2) { width: 32px !important; }
 .personal-table thead th:nth-child(3), .daily-table thead th:nth-child(3) { width: 46px !important; }
 .personal-table thead th:nth-child(n+4):not(:last-child) { width: calc((75% - 118px) / 5) !important; }
 .daily-table thead th:nth-child(4), .daily-table thead th:nth-child(5) { width: calc((75% - 118px) / 2) !important; }
 .personal-table thead th:last-child, .daily-table thead th:last-child { width: 25% !important; }
+}
 .personal-table tr > :nth-child(-n+3), .daily-table tr > :nth-child(-n+3) {
   white-space: nowrap !important; word-break: keep-all !important; padding-left: 2px !important; padding-right: 2px !important;
 }
@@ -632,7 +634,7 @@ input {height: 20px !important;padding: 2px 4px !important;font-size: 9px !impor
 }
 .record-note-editor { position: absolute; top: 50%; left: 0; transform: translateY(-50%); resize: none; border: 0; background: transparent; }
 .record-note-print { display: none; }
-.record-note-editor.note-multiline, .record-note-print.note-multiline { font-size: 9px !important; }
+.record-note-print.note-multiline { font-size: 9px !important; }
 @media print {
   .print-card table tbody tr.print-absent-row,
   .print-card table tbody tr.print-absent-row td { background: #f8f8f8 !important; }
@@ -642,13 +644,24 @@ input {height: 20px !important;padding: 2px 4px !important;font-size: 9px !impor
   .dark .print-absent-row { background: #252d3a !important; }
 }
 @media screen {
-  .personal-table, .daily-table { min-width: 480px; }
-  .personal-table tbody tr, .daily-table tbody tr { height: 48px; }
-  .personal-table tbody td, .daily-table tbody td { padding-top: 2px; padding-bottom: 2px; }
-  .daily-table .print-level-group { gap: clamp(6px, 1vw, 14px); }
-  .daily-table .print-level-option { min-width: 30px; width: 30px; height: 32px; padding: 0; font-size: 14px; flex-shrink: 0; }
-  .daily-table td:has(.print-level-group) { padding-left: 2px; padding-right: 2px; }
-  .personal-table .print-holiday-label, .daily-table .print-holiday-label { height: 32px; min-height: 0; padding: 0 3px; font-size: 11px; line-height: 15px; overflow: auto; }
+  .personal-table, .daily-table { min-width: 760px; font-size: 14px; }
+  .print-card, .print-card > .overflow-x-auto { min-width: 0; }
+  .personal-table thead th:nth-child(1), .daily-table thead th:nth-child(1) { width: 60px !important; }
+  .personal-table thead th:nth-child(2), .daily-table thead th:nth-child(2) { width: 48px !important; }
+  .personal-table thead th:nth-child(3), .daily-table thead th:nth-child(3) { width: 88px !important; }
+  .personal-table thead th:nth-child(n+4):not(:last-child) { width: calc((80% - 196px) / 5) !important; }
+  .daily-table thead th:nth-child(4), .daily-table thead th:nth-child(5) { width: calc((80% - 196px) / 2) !important; }
+  .personal-table thead th:last-child, .daily-table thead th:last-child { width: 20% !important; }
+  .personal-table tbody tr, .daily-table tbody tr { height: 56px; }
+  .personal-table tbody td, .daily-table tbody td { padding-top: 8px; padding-bottom: 8px; }
+  .personal-table thead th, .daily-table thead th { padding: 10px 6px; }
+  .personal-table .print-status-text, .daily-table .print-status-text { font-size: 13px; padding: 6px 10px; }
+  .personal-table .print-choice-on, .personal-table .print-choice-off { width: 30px; height: 30px; font-size: 14px; }
+  .record-note-editor { font-size: 14px; line-height: 20px; padding: 1px 6px; }
+  .daily-table .print-level-group { gap: 14px; }
+  .daily-table .print-level-option { min-width: 38px; width: 38px; height: 36px; padding: 0; font-size: 14px; flex-shrink: 0; }
+  .daily-table td:has(.print-level-group) { padding-left: 6px; padding-right: 6px; }
+  .personal-table .print-holiday-label, .daily-table .print-holiday-label { height: 36px; min-height: 0; padding: 0 6px; font-size: 14px; line-height: 18px; overflow: auto; }
 }
 @media print {
   .print-card .record-note-editor { display: none !important; }
@@ -955,15 +968,15 @@ function NoteField({ value, onChange, label }) {
         const style = getComputedStyle(element);
         const available = element.clientWidth - parseFloat(style.paddingLeft || 0) - parseFloat(style.paddingRight || 0);
         // Always measure at the original font size, so shrinking cannot toggle back and forth.
-        context.font = `${style.fontStyle} ${style.fontWeight} 11px ${style.fontFamily}`;
+        context.font = `${style.fontStyle} ${style.fontWeight} ${element === editorRef.current ? 14 : 11}px ${style.fontFamily}`;
         const lines = String(value || '').split(/\r?\n/);
         const spacing = parseFloat(style.letterSpacing) || 0;
         const multiline = lines.length > 1 || lines.some(line => context.measureText(line).width + Math.max(0, line.length - 1) * spacing > available);
-        element.classList.toggle('note-multiline', multiline);
+        element.classList.toggle('note-multiline', element === printRef.current && multiline);
         if (element === editorRef.current) {
           // Center the actual text block, not an empty two-line textarea.
           element.style.height = '0px';
-          element.style.height = `${Math.min(32, Math.max(17, element.scrollHeight))}px`;
+          element.style.height = `${Math.min(44, Math.max(22, element.scrollHeight))}px`;
         }
       }
     };
