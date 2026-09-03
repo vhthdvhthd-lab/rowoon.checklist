@@ -627,7 +627,7 @@ input {height: 20px !important;padding: 2px 4px !important;font-size: 9px !impor
 }
 .record-note-cell { position: relative; padding: 0 !important; }
 .record-note-editor, .record-note-print {
-  box-sizing: border-box; width: 100%; height: 32px; margin: 0; padding: 1px 3px;
+  box-sizing: border-box; width: 100%; height: 17px; margin: 0; padding: 1px 3px;
   font-size: 11px; line-height: 15px; white-space: pre-wrap; overflow-wrap: anywhere;
 }
 .record-note-editor { position: absolute; top: 50%; left: 0; transform: translateY(-50%); resize: none; border: 0; background: transparent; }
@@ -652,7 +652,7 @@ input {height: 20px !important;padding: 2px 4px !important;font-size: 9px !impor
 }
 @media print {
   .print-card .record-note-editor { display: none !important; }
-  .print-card .record-note-print { display: block; position: absolute; top: 50%; left: 0; transform: translateY(-50%); height: 6mm; line-height: 3mm; padding: 0 2px; overflow: hidden; }
+  .print-card .record-note-print { display: flex; align-items: center; position: absolute; top: 50%; left: 0; transform: translateY(-50%); height: 6mm; line-height: 3mm; padding: 0 2px; overflow: hidden; }
 }
 </style>
 </head>
@@ -960,6 +960,11 @@ function NoteField({ value, onChange, label }) {
         const spacing = parseFloat(style.letterSpacing) || 0;
         const multiline = lines.length > 1 || lines.some(line => context.measureText(line).width + Math.max(0, line.length - 1) * spacing > available);
         element.classList.toggle('note-multiline', multiline);
+        if (element === editorRef.current) {
+          // Center the actual text block, not an empty two-line textarea.
+          element.style.height = '0px';
+          element.style.height = `${Math.min(32, Math.max(17, element.scrollHeight))}px`;
+        }
       }
     };
     update();
