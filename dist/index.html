@@ -616,15 +616,43 @@ input {height: 20px !important;padding: 2px 4px !important;font-size: 9px !impor
 
 <style>
 /* 두 표는 동일한 날짜/요일/상태/비고 폭을 사용합니다. */
-.personal-table thead th:nth-child(1), .daily-table thead th:nth-child(1) { width: 6.56% !important; }
-.personal-table thead th:nth-child(2), .daily-table thead th:nth-child(2) { width: 5.9% !important; }
-.personal-table thead th:nth-child(3), .daily-table thead th:nth-child(3) { width: 10.49% !important; }
-.personal-table thead th:nth-child(n+4):not(:last-child) { width: 12.13% !important; }
-.daily-table thead th:nth-child(4), .daily-table thead th:nth-child(5) { width: 30.325% !important; }
-.personal-table thead th:last-child, .daily-table thead th:last-child { width: 16.4% !important; }
+.personal-table thead th:nth-child(1), .daily-table thead th:nth-child(1) { width: 40px !important; }
+.personal-table thead th:nth-child(2), .daily-table thead th:nth-child(2) { width: 32px !important; }
+.personal-table thead th:nth-child(3), .daily-table thead th:nth-child(3) { width: 46px !important; }
+.personal-table thead th:nth-child(n+4):not(:last-child) { width: calc((75% - 118px) / 5) !important; }
+.daily-table thead th:nth-child(4), .daily-table thead th:nth-child(5) { width: calc((75% - 118px) / 2) !important; }
+.personal-table thead th:last-child, .daily-table thead th:last-child { width: 25% !important; }
+.personal-table tr > :nth-child(-n+3), .daily-table tr > :nth-child(-n+3) {
+  white-space: nowrap !important; word-break: keep-all !important; padding-left: 2px !important; padding-right: 2px !important;
+}
+.record-note-cell { position: relative; padding: 0 !important; }
+.record-note-editor, .record-note-print {
+  box-sizing: border-box; width: 100%; height: 32px; margin: 0; padding: 1px 3px;
+  font-size: 11px; line-height: 15px; white-space: pre-wrap; overflow-wrap: anywhere;
+}
+.record-note-editor { position: absolute; top: 50%; left: 0; transform: translateY(-50%); resize: none; border: 0; background: transparent; }
+.record-note-print { display: none; }
+.record-note-editor.note-multiline, .record-note-print.note-multiline { font-size: 9px !important; }
+@media print {
+  .print-card table tbody tr.print-absent-row,
+  .print-card table tbody tr.print-absent-row td { background: #f8f8f8 !important; }
+}
 @media screen {
-  .daily-table .print-level-group { gap: 3px; }
-  .daily-table .print-level-option { min-width: 24px; padding-left: 4px; padding-right: 4px; }
+  .print-absent-row { background: #fafafa !important; }
+  .dark .print-absent-row { background: #252d3a !important; }
+}
+@media screen {
+  .personal-table, .daily-table { min-width: 480px; }
+  .personal-table tbody tr, .daily-table tbody tr { height: 48px; }
+  .personal-table tbody td, .daily-table tbody td { padding-top: 2px; padding-bottom: 2px; }
+  .daily-table .print-level-group { gap: clamp(6px, 1vw, 14px); }
+  .daily-table .print-level-option { min-width: 30px; width: 30px; height: 32px; padding: 0; font-size: 14px; flex-shrink: 0; }
+  .daily-table td:has(.print-level-group) { padding-left: 2px; padding-right: 2px; }
+  .personal-table .print-holiday-label, .daily-table .print-holiday-label { height: 32px; min-height: 0; padding: 0 3px; font-size: 11px; line-height: 15px; overflow: auto; }
+}
+@media print {
+  .print-card .record-note-editor { display: none !important; }
+  .print-card .record-note-print { display: block; position: absolute; top: 50%; left: 0; transform: translateY(-50%); height: 6mm; line-height: 3mm; padding: 0 2px; overflow: hidden; }
 }
 </style>
 </head>
@@ -913,6 +941,46 @@ const KOREAN_HOLIDAY_NAMES = {
   '2030-10-03': '개천절', '2030-10-09': '한글날', '2030-12-25': '기독탄신일'
 };
 const getKoreanHolidayName = (dateKey) => KOREAN_HOLIDAY_NAMES[dateKey] || '';
+
+function NoteField({ value, onChange, label }) {
+  const editorRef = React.useRef(null);
+  const printRef = React.useRef(null);
+  React.useLayoutEffect(() => {
+    const canvas = document.createElement('canvas');
+    const context = canvas.getContext('2d');
+    const update = () => {
+      if (!context) return;
+      for (const element of [editorRef.current, printRef.current]) {
+        if (!element || !element.getBoundingClientRect().width) continue;
+        const style = getComputedStyle(element);
+        const available = element.clientWidth - parseFloat(style.paddingLeft || 0) - parseFloat(style.paddingRight || 0);
+        // Always measure at the original font size, so shrinking cannot toggle back and forth.
+        context.font = `${style.fontStyle} ${style.fontWeight} 11px ${style.fontFamily}`;
+        const lines = String(value || '').split(/\r?\n/);
+        const spacing = parseFloat(style.letterSpacing) || 0;
+        const multiline = lines.length > 1 || lines.some(line => context.measureText(line).width + Math.max(0, line.length - 1) * spacing > available);
+        element.classList.toggle('note-multiline', multiline);
+      }
+    };
+    update();
+    const observer = new ResizeObserver(update);
+    observer.observe(editorRef.current.parentElement);
+    const printMedia = window.matchMedia('print');
+    printMedia.addEventListener('change', update);
+    window.addEventListener('beforeprint', update);
+    document.fonts?.addEventListener('loadingdone', update);
+    return () => {
+      observer.disconnect();
+      printMedia.removeEventListener('change', update);
+      window.removeEventListener('beforeprint', update);
+      document.fonts?.removeEventListener('loadingdone', update);
+    };
+  }, [value]);
+  return <>
+    <textarea ref={editorRef} rows={2} aria-label={label} value={value || ''} onChange={onChange} className="record-note-editor" />
+    <span ref={printRef} className="record-note-print">{value || ''}</span>
+  </>;
+}
 
 function App() {
 const [accounts, setAccounts] = useState(() => {
@@ -2367,7 +2435,7 @@ else if (d.isWeekend) rowBg = 'bg-slate-100/70 dark:bg-slate-900/40';
 else if (status === '결석') rowBg = 'bg-rose-50/70 dark:bg-rose-950/30';
 else if (holidayName || status === '미지원' || status === '휴원') rowBg = 'bg-slate-100/60 dark:bg-slate-800/50';
 return (
-<tr key={d.dateKey} className={`${rowBg} ${isInactive ? "print-inactive-row" : ""} ${d.isToday ? "print-today-row" : ""} hover:bg-slate-100/80 dark:hover:bg-slate-700/50 transition h-12`}>
+<tr key={d.dateKey} className={`${rowBg} ${isInactive ? "print-inactive-row" : ""} ${!holidayName && status === '결석' ? 'print-absent-row' : ''} ${d.isToday ? "print-today-row" : ""} hover:bg-slate-100/80 dark:hover:bg-slate-700/50 transition h-12`}>
 <td className="p-2 text-center font-bold text-sm border-r border-slate-200 dark:border-slate-700 print:border-black print:text-[11px]">
 {d.day}일
 </td>
@@ -2413,13 +2481,13 @@ option === status ? 'bg-slate-100 dark:bg-slate-700' : ''
 </div>
 )}
 </td>
-{holidayName ? (
+{holidayName || status === '휴원' ? (
 <td
-colSpan={PERSONAL_ACTIVITIES.length}
+colSpan={PERSONAL_ACTIVITIES.length + 1}
 className="print-holiday-cell p-1 text-center border-r border-slate-200 dark:border-slate-700 print:border-black bg-slate-50 dark:bg-slate-900/40"
 >
 <span className="print-holiday-label flex items-center justify-center w-full font-black text-sm text-slate-700 dark:text-slate-200 print:text-[11px] print:font-extrabold">
-{holidayName}
+{[holidayName || '휴원', note].filter(Boolean).join(' · ')}
 </span>
 </td>
 ) : PERSONAL_ACTIVITIES.map(act => {
@@ -2444,15 +2512,13 @@ isInactive
 </td>
 );
 })}
-<td className="p-1">
-<input
-type="text"
+{!holidayName && status !== '휴원' && <td className="record-note-cell">
+<NoteField
+label={`${d.day}일 개인선택활동 비고`}
 value={note}
 onChange={(e) => handlePersonalNoteChange(d.dateKey, e.target.value)}
-placeholder="특이사항 메모"
-className="w-full bg-transparent px-1.5 py-1 rounded-md text-[11px] border border-transparent focus:border-slate-300 focus:bg-white dark:focus:bg-slate-700 focus:outline-none transition print:placeholder-transparent"
 />
-</td>
+</td>}
 </tr>
 );
 })}
@@ -2542,7 +2608,7 @@ else if (d.isWeekend) rowBg = 'bg-slate-100/70 dark:bg-slate-900/40';
 else if (status === '결석') rowBg = 'bg-rose-50/70 dark:bg-rose-950/30';
 else if (holidayName || status === '미지원' || status === '휴원') rowBg = 'bg-slate-100/60 dark:bg-slate-800/50';
 return (
-<tr key={d.dateKey} className={`${rowBg} ${isInactive ? "print-inactive-row" : ""} ${d.isToday ? "print-today-row" : ""} hover:bg-slate-100/80 dark:hover:bg-slate-700/50 transition h-12`}>
+<tr key={d.dateKey} className={`${rowBg} ${isInactive ? "print-inactive-row" : ""} ${!holidayName && status === '결석' ? 'print-absent-row' : ''} ${d.isToday ? "print-today-row" : ""} hover:bg-slate-100/80 dark:hover:bg-slate-700/50 transition h-12`}>
 <td className="p-2 text-center font-bold text-sm border-r border-slate-200 dark:border-slate-700 print:border-black">
 {d.day}일
 </td>
@@ -2589,10 +2655,10 @@ option === status ? 'bg-slate-100 dark:bg-slate-700' : ''
 </div>
 )}
 </td>
-{holidayName ? (
-<td colSpan={2} className="print-holiday-cell p-2 text-center border-r border-slate-200 dark:border-slate-700 print:border-black">
+{holidayName || status === '휴원' ? (
+<td colSpan={3} className="print-holiday-cell p-2 text-center border-r border-slate-200 dark:border-slate-700 print:border-black">
 <div className="print-holiday-label w-full flex items-center justify-center min-h-[38px] px-3 font-black text-sm text-slate-700 dark:text-slate-200 print:text-black print:text-[11px]">
-{holidayName}
+{[holidayName || '휴원', dayData.dailyNote].filter(Boolean).join(' · ')}
 </div>
 </td>
 ) : (
@@ -2639,9 +2705,9 @@ isInactive
 </td>
 </>
 )}
-<td className="p-1 border-l border-slate-200 dark:border-slate-600 print:border-black">
-<input type="text" aria-label={`${d.day}일 일상생활지원 비고`} value={dayData.dailyNote || ''} onChange={(e) => handleDailyNoteChange(d.dateKey, e.target.value)} className="w-full bg-transparent px-1.5 py-1 rounded-md text-[11px] border border-transparent focus:border-slate-300 focus:bg-white dark:focus:bg-slate-700 focus:outline-none transition" />
-</td>
+{!holidayName && status !== '휴원' && <td className="record-note-cell border-l border-slate-200 dark:border-slate-600 print:border-black">
+<NoteField label={`${d.day}일 일상생활지원 비고`} value={dayData.dailyNote || ''} onChange={(e) => handleDailyNoteChange(d.dateKey, e.target.value)} />
+</td>}
 </tr>
 );
 })}
