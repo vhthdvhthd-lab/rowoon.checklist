@@ -637,11 +637,11 @@ input {height: 20px !important;padding: 2px 4px !important;font-size: 9px !impor
 .record-note-print.note-multiline { font-size: 9px !important; }
 @media print {
   .print-card table tbody tr.print-absent-row,
-  .print-card table tbody tr.print-absent-row td { background: #f8f8f8 !important; }
+  .print-card table tbody tr.print-absent-row td { background: #f1f1f1 !important; }
 }
 @media screen {
-  .print-absent-row { background: #fafafa !important; }
-  .dark .print-absent-row { background: #252d3a !important; }
+  .print-inactive-row, .print-inactive-row > td { background: #f1f5f9 !important; }
+  .dark .print-inactive-row, .dark .print-inactive-row > td { background: #293344 !important; }
 }
 @media screen {
   .personal-table, .daily-table { min-width: 760px; font-size: 14px; }
@@ -666,6 +666,27 @@ input {height: 20px !important;padding: 2px 4px !important;font-size: 9px !impor
 @media print {
   .print-card .record-note-editor { display: none !important; }
   .print-card .record-note-print { display: flex; align-items: center; position: absolute; top: 50%; left: 0; transform: translateY(-50%); height: 6mm; line-height: 3mm; padding: 0 2px; overflow: hidden; }
+}
+</style>
+<style>
+/* 표 선은 셀/행/구역의 중복 테두리 대신 하나의 규칙으로 통일합니다. */
+@media print {
+  .print-card table:is(.personal-table, .daily-table) {
+    border-collapse: collapse !important; border-spacing: 0 !important;
+    border: 0.6px solid #555 !important; outline: none !important;
+  }
+  .print-card table:is(.personal-table, .daily-table) > thead,
+  .print-card table:is(.personal-table, .daily-table) > tbody,
+  .print-card table:is(.personal-table, .daily-table) tr { border: 0 !important; }
+  .print-card table:is(.personal-table, .daily-table) > thead > tr > th,
+  .print-card table:is(.personal-table, .daily-table) > tbody > tr > td {
+    border: 0.5px solid #666 !important; box-shadow: none !important;
+  }
+}
+@media screen {
+  .print-card table:is(.personal-table, .daily-table) { border-collapse: collapse; border: 1px solid #cbd5e1; }
+  .print-card table:is(.personal-table, .daily-table) > thead > tr > th,
+  .print-card table:is(.personal-table, .daily-table) > tbody > tr > td { border: 1px solid #e2e8f0; }
 }
 </style>
 </head>
