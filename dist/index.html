@@ -1685,36 +1685,67 @@ if (!pRecord) return false;
 if (pRecord.status === '결석' || pRecord.status === '미지원' || pRecord.status === '휴원') return true;
 return Object.values(pRecord.personal || {}).some(Boolean) || !!pRecord.oral || !!pRecord.meal;
 };
-const handleAttendanceExport = () => {
+const handleAttendanceExport = async () => {
   if (!sharedReady || !participants.length) return;
-  const picker = document.createElement('input');
-  picker.type = 'file';
-  picker.accept = '.xlsx';
-  picker.onchange = async () => {
-    const template = picker.files[0];
-    if (!template) return;
-    try {
-      await loadExcelLibrary();
-      const buffer = await window.createAttendanceWorkbook({
-        template,
-        participants: participants.map(({ id, name }) => ({
-          name, days: checklistData[id]?.[monthKey]?.days || {}
-        })),
-        monthDays: calendarDays, viewTab, holidayName: getKoreanHolidayName
+  const endpoint = '/api/attendance-template';
+  const exportWorkbook = async (template, register = false) => {
+    await loadExcelLibrary();
+    const buffer = await window.createAttendanceWorkbook({
+      template,
+      participants: participants.map(({ id, name }) => ({
+        name, days: checklistData[id]?.[monthKey]?.days || {}
+      })),
+      monthDays: calendarDays, viewTab, holidayName: getKoreanHolidayName
+    });
+    if (register) {
+      const bytes = new Uint8Array(await template.arrayBuffer());
+      const encoded = btoa(Array.from(bytes, byte => String.fromCharCode(byte)).join(''));
+      const response = await fetch(endpoint, {
+        method: 'PUT',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ template: encoded })
       });
-      const url = URL.createObjectURL(new Blob([buffer], {
-        type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
-      }));
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = `출결_전체이용인_${monthKey}.xlsx`;
-      link.click();
-      setTimeout(() => URL.revokeObjectURL(url), 1000);
-    } catch (error) {
-      showToast(error.message || '출결 엑셀을 만들 수 없습니다.');
+      if (!response.ok) throw new Error((await response.json()).error || '양식을 저장하지 못했습니다.');
     }
+    const url = URL.createObjectURL(new Blob([buffer], {
+      type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    }));
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `출결_전체이용인_${monthKey}.xlsx`;
+    link.click();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
   };
-  picker.click();
+  const showExportError = error => showToast(error.message || '출결 엑셀을 만들 수 없습니다.');
+  try {
+    const response = await fetch(endpoint, { cache: 'no-store' });
+    if (!response.ok) throw new Error('등록된 출결 양식을 불러오지 못했습니다.');
+    const { template } = await response.json();
+    if (template) {
+      await exportWorkbook(new Blob([Uint8Array.from(atob(template), char => char.charCodeAt(0))]));
+      return;
+    }
+    if (!['admin', 'manager'].includes(currentAccount.role)) {
+      showToast('관리자 또는 팀장이 먼저 출결 엑셀 양식을 등록해 주세요.');
+      return;
+    }
+    const picker = document.createElement('input');
+    picker.type = 'file';
+    picker.accept = '.xlsx';
+    picker.onchange = () => {
+      const file = picker.files[0];
+      if (!file) return;
+      if (file.size > 500 * 1024) {
+        showToast('500KB 이하의 엑셀 양식을 선택해 주세요.');
+        return;
+      }
+      exportWorkbook(file, true).catch(showExportError);
+    };
+    showToast('처음 한 번만 출결 엑셀 양식을 선택해 주세요.');
+    picker.click();
+  } catch (error) {
+    showExportError(error);
+  }
 };
 const handlePrint = () => {
 window.print();

@@ -108,6 +108,23 @@ export default { async fetch(request, env) {
       const identity = await readSession(request, env.DB, env.ROWOON_ACCESS_KEY);
       if (!identity) return json({ error: 'Unauthorized' }, 401);
       if (url.pathname === '/api/session' && request.method === 'GET') return json(identity);
+      if (url.pathname === '/api/attendance-template') {
+        if (request.method === 'GET') {
+          const row = await env.DB.prepare("SELECT value FROM checklist_state WHERE key = 'attendance-template'").first();
+          return json({ template: row ? JSON.parse(row.value) : null });
+        }
+        if (request.method === 'PUT') {
+          if (!['admin', 'manager'].includes(identity.role)) return json({ error: '관리자 또는 팀장만 양식을 등록할 수 있습니다.' }, 403);
+          const { template } = await request.json();
+          if (typeof template !== 'string' || template.length > 700000 || !/^UEsDB[A-Za-z0-9+/]+={0,2}$/.test(template)) {
+            return json({ error: '500KB 이하의 엑셀 양식을 선택해 주세요.' }, 400);
+          }
+          const result = await env.DB.prepare("INSERT OR IGNORE INTO checklist_state (key, value, updated_at) VALUES ('attendance-template', ?, ?)")
+            .bind(JSON.stringify(template), new Date().toISOString()).run();
+          return result.meta.changes ? json({ ok: true }) : json({ error: '양식이 이미 등록됐어요. 출결 엑셀을 다시 눌러 주세요.' }, 409);
+        }
+        return json({ error: 'Method Not Allowed' }, 405);
+      }
       if (url.pathname === '/api/data') return await handleData(request, env, url);
       return json({ error: 'Not found' }, 404);
     }
