@@ -53,14 +53,24 @@ window.createAttendanceWorkbook = async ({ template, participants, monthDays, vi
   }
   if (!rows.length) throw new Error('내려받을 출결 기록이 없습니다.');
 
-  const styles = Array.from({ length: 13 }, (_, i) => sheet.getRow(4).getCell(i + 1).style);
-  sheet.eachRow((row, number) => {
-    if (number >= 4) row.values = [];
-  });
-  rows.forEach((values, index) => {
-    const row = sheet.getRow(index + 4);
-    row.values = values;
-    styles.forEach((style, i) => { row.getCell(i + 1).style = style; });
-  });
-  return workbook.xlsx.writeBuffer();
+  // Rebuild the upload sheet so source workbook metadata is not copied.
+  const output = new window.ExcelJS.Workbook();
+  const upload = output.addWorksheet('업로드');
+  const columnCount = 13;
+  for (let column = 1; column <= columnCount; column++) {
+    const width = sheet.getColumn(column).width;
+    if (Number.isFinite(width) && width > 0) upload.getColumn(column).width = width;
+  }
+  for (let number = 1; number <= 3; number++) {
+    const source = sheet.getRow(number);
+    const target = upload.getRow(number);
+    target.values = Array.from({ length: columnCount }, (_, index) => source.getCell(index + 1).text || null);
+    if (Number.isFinite(source.height) && source.height > 0) target.height = source.height;
+  }
+  upload.mergeCells('A1:M1');
+  upload.getCell('A1').font = { bold: true };
+  upload.getRow(2).font = { bold: true };
+  upload.getRow(2).alignment = { vertical: 'middle', wrapText: true };
+  upload.addRows(rows);
+  return output.xlsx.writeBuffer();
 };
