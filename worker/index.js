@@ -81,18 +81,24 @@ export default { async fetch(request, env) {
         if (!env.ROWOON_ACCESS_KEY || env.ROWOON_ACCESS_KEY.length < 8) {
           return json({ error: '접속키 설정이 필요합니다.' }, 503);
         }
-        const { code, accessKey, remember } = await request.json();
+        const { code, accessKey, remember, includeData } = await request.json();
         if (!await matchesAccessKey(env.ROWOON_ACCESS_KEY, accessKey)) {
           return json({ error: 'Unauthorized' }, 401);
         }
         await ensureSchema(env.DB);
         const row = await env.DB.prepare("SELECT value FROM checklist_state WHERE key = 'settings'").first();
-        const accounts = row ? JSON.parse(row.value).accounts : null;
+        const settings = row ? JSON.parse(row.value) : null;
+        const accounts = settings?.accounts;
         const account = Array.isArray(accounts) && accounts.find(item => item.code === code);
         if (!account) return json({ error: 'Unauthorized' }, 401);
         const identity = { name: account.name, teacherName: account.teacherName, role: account.role };
-        return new Response(JSON.stringify(identity), {
-          headers: { ...JSON_HEADERS, 'set-cookie': await makeSession(env.DB, env.ROWOON_ACCESS_KEY, identity, remember === true) }
+        const [cookie, checklists] = await Promise.all([
+          makeSession(env.DB, env.ROWOON_ACCESS_KEY, identity, remember === true),
+          includeData === true ? readChecklists(env.DB) : null
+        ]);
+        const payload = includeData === true ? { identity, settings, checklists } : identity;
+        return new Response(JSON.stringify(payload), {
+          headers: { ...JSON_HEADERS, 'set-cookie': cookie }
         });
       }
       if (url.pathname === '/api/logout' && request.method === 'POST') {

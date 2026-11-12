@@ -1096,6 +1096,7 @@ useEffect(() => {
   return () => window.removeEventListener('beforeunload', warnBeforeLeaving);
 }, [hasUnsavedChanges, currentAccount]);
 useEffect(() => { checklistDataRef.current = checklistData; }, [checklistData]);
+const loginDataRef = React.useRef(null);
 // 최초 접속: 서버의 공용 데이터를 우선 적용합니다.
 useEffect(() => {
   if (!currentAccount) return;
@@ -1103,10 +1104,13 @@ useEffect(() => {
   (async () => {
     setSharedSyncing(true);
     try {
-      const [remoteSettings, remoteChecklists] = await Promise.all([
-        sharedGet(SHARED_SETTINGS_KEY),
-        sharedGet(SHARED_CHECKLISTS_KEY)
-      ]);
+      const loginData = loginDataRef.current;
+      const [remoteSettings, remoteChecklists] = loginData
+        ? [loginData.settings, loginData.checklists]
+        : await Promise.all([
+          sharedGet(SHARED_SETTINGS_KEY),
+          sharedGet(SHARED_CHECKLISTS_KEY)
+        ]);
       if (cancelled) return;
       if (remoteSettings && typeof remoteSettings === 'object') {
         if (remoteSettings.accounts) setAccounts(normalizeAccounts(remoteSettings.accounts));
@@ -1258,10 +1262,12 @@ const handleLogin = async (e) => {
     const response = await fetch('/api/login', {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ code: inputCode.trim(), accessKey, remember: rememberDevice })
+      body: JSON.stringify({ code: inputCode.trim(), accessKey, remember: rememberDevice, includeData: true })
     });
     if (!response.ok) throw new Error('접속 고유번호와 센터 접속키를 확인해 주세요.');
-    setCurrentAccount(await response.json());
+    const loginData = await response.json();
+    loginDataRef.current = loginData.identity ? loginData : null;
+    setCurrentAccount(loginData.identity ?? loginData);
     setTeacherFilter('전체');
     setInputCode('');
     setAccessKey('');
