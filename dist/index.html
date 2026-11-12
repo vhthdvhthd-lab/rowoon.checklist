@@ -997,6 +997,18 @@ const [facilityInfo, setFacilityInfo] = useState({});
 const [currentAccount, setCurrentAccount] = useState(null);
 const [inputCode, setInputCode] = useState('');
 const [accessKey, setAccessKey] = useState('');
+const [rememberDevice, setRememberDevice] = useState(false);
+const [restoringSession, setRestoringSession] = useState(true);
+useEffect(() => {
+  let active = true;
+  fetch('/api/session', { cache: 'no-store' })
+    .then(response => response.ok ? response.json() : null)
+    .then(identity => { if (active && identity) setCurrentAccount(identity); })
+    .catch(() => {})
+    .finally(() => { if (active) setRestoringSession(false); });
+  return () => { active = false; };
+}, []);
+
 const [loginError, setLoginError] = useState('');
 const [teachers, setTeachers] = useState([]);
 const [participants, setParticipants] = useState([]);
@@ -1225,7 +1237,7 @@ const handleLogin = async (e) => {
     const response = await fetch('/api/login', {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ code: inputCode.trim(), accessKey })
+      body: JSON.stringify({ code: inputCode.trim(), accessKey, remember: rememberDevice })
     });
     if (!response.ok) throw new Error('접속 고유번호와 센터 접속키를 확인해 주세요.');
     setCurrentAccount(await response.json());
@@ -2017,6 +2029,7 @@ const globalStats = useMemo(() => {
 
 const displayStats = statsView === 'all' ? globalStats : extendedStats;
 
+if (restoringSession) return <p role="status" className="p-6 text-center">로그인 상태 확인 중…</p>;
 if (!currentAccount) {
 return (
 <div className="min-h-screen bg-[#F4F8FF] text-[#172955] flex items-center justify-center p-4 font-sans">
@@ -2031,6 +2044,10 @@ return (
 <form onSubmit={handleLogin} className="space-y-4">
 <label className="block text-sm font-bold">센터 접속키
 <input type="password" required autoComplete="current-password" className="block w-full mt-1 p-2 rounded border" value={accessKey} onChange={e => setAccessKey(e.target.value)} />
+</label>
+<label className="flex items-center gap-2 text-sm">
+<input type="checkbox" checked={rememberDevice} onChange={e => setRememberDevice(e.target.checked)} />
+이 기기에서 로그인 유지
 </label>
 <div>
 <label className="block text-xs font-bold text-slate-600 mb-1.5 text-center">

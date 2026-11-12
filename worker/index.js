@@ -1,4 +1,4 @@
-import { hasSession, makeSession, matchesAccessKey, sessionCookie } from './session.js';
+import { readSession, revokeSession, makeSession, matchesAccessKey, sessionCookie } from './session.js';
 const JSON_HEADERS = { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store, max-age=0' };
 const json = (value, status = 200) => new Response(JSON.stringify(value), { status, headers: JSON_HEADERS });
 
@@ -81,7 +81,7 @@ export default { async fetch(request, env) {
         if (!env.ROWOON_ACCESS_KEY || env.ROWOON_ACCESS_KEY.length < 8) {
           return json({ error: '접속키 설정이 필요합니다.' }, 503);
         }
-        const { code, accessKey } = await request.json();
+        const { code, accessKey, remember } = await request.json();
         if (!await matchesAccessKey(env.ROWOON_ACCESS_KEY, accessKey)) {
           return json({ error: 'Unauthorized' }, 401);
         }
@@ -90,14 +90,18 @@ export default { async fetch(request, env) {
         const accounts = row ? JSON.parse(row.value).accounts : null;
         const account = Array.isArray(accounts) && accounts.find(item => item.code === code);
         if (!account) return json({ error: 'Unauthorized' }, 401);
-        return new Response(JSON.stringify({ name: account.name, teacherName: account.teacherName, role: account.role }), {
-          headers: { ...JSON_HEADERS, 'set-cookie': await makeSession(env.ROWOON_ACCESS_KEY) }
+        const identity = { name: account.name, teacherName: account.teacherName, role: account.role };
+        return new Response(JSON.stringify(identity), {
+          headers: { ...JSON_HEADERS, 'set-cookie': await makeSession(env.DB, env.ROWOON_ACCESS_KEY, identity, remember === true) }
         });
       }
       if (url.pathname === '/api/logout' && request.method === 'POST') {
+        await revokeSession(request, env.DB, env.ROWOON_ACCESS_KEY);
         return new Response(null, { status: 204, headers: { ...JSON_HEADERS, 'set-cookie': sessionCookie() } });
       }
-      if (!await hasSession(request, env.ROWOON_ACCESS_KEY)) return json({ error: 'Unauthorized' }, 401);
+      const identity = await readSession(request, env.DB, env.ROWOON_ACCESS_KEY);
+      if (!identity) return json({ error: 'Unauthorized' }, 401);
+      if (url.pathname === '/api/session' && request.method === 'GET') return json(identity);
       if (url.pathname === '/api/data') return await handleData(request, env, url);
       return json({ error: 'Not found' }, 404);
     }
