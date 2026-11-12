@@ -36,6 +36,6 @@ export async function hasSession(request, secret) {
 }
 
 export async function matchesAccessKey(secret, provided) {
-  if (typeof secret !== 'string' || secret.length < 16 || typeof provided !== 'string' || provided.length > 256) return false;
+  if (typeof secret !== 'string' || secret.length < 8 || typeof provided !== 'string' || provided.length > 256) return false;
   return equal(await sign(secret, provided), await sign(secret, secret));
 }

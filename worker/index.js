@@ -78,7 +78,7 @@ export default { async fetch(request, env) {
         return json({ error: 'Forbidden' }, 403);
       }
       if (url.pathname === '/api/login' && request.method === 'POST') {
-        if (!env.ROWOON_ACCESS_KEY || env.ROWOON_ACCESS_KEY.length < 16) {
+        if (!env.ROWOON_ACCESS_KEY || env.ROWOON_ACCESS_KEY.length < 8) {
           return json({ error: '접속키 설정이 필요합니다.' }, 503);
         }
         const { code, accessKey } = await request.json();
