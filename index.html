@@ -692,6 +692,8 @@ input {height: 20px !important;padding: 2px 4px !important;font-size: 9px !impor
 </head>
 <body class="h-full bg-slate-100 text-slate-800 antialiased selection:bg-rose-500 selection:text-white">
 <div id="root"></div>
+<script src="/exceljs.min.js"></script>
+<script src="/attendance-export.js"></script>
 <script type="text/babel">
 const { useState, useEffect, useMemo } = React;
 
@@ -820,39 +822,7 @@ const IconBuilding = ({ className = "w-4 h-4" }) => (
 const IconUserCheck = ({ className = "w-4 h-4" }) => (
 <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M16 21v-2a4 4 0 00-4-4H6a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><polyline points="16 11 18 13 22 9"/></svg>
 );
-const INITIAL_ACCOUNTS = [
-{ code: '00', name: '관리자', role: 'admin', teacherName: '전체' },
-{ code: '01', name: '임지현', role: 'manager', teacherName: '임지현' },
-{ code: '02', name: '고은정', role: 'teacher', teacherName: '고은정' },
-{ code: '03', name: '이나라', role: 'teacher', teacherName: '이나라' }
-];
-
-// 01번 임지현은 항상 팀장으로 유지합니다.
-// 기존 공용저장소/이전 브라우저 저장 데이터가 'teacher'로 남아 있어도 자동으로 팀장으로 보정합니다.
-const normalizeAccounts = (list) => {
-  const source = Array.isArray(list) && list.length ? list : INITIAL_ACCOUNTS;
-  return source.map(a =>
-    a && a.code === '01' && a.teacherName === '임지현'
-      ? { ...a, name: '임지현', role: 'manager', teacherName: '임지현' }
-      : a
-  );
-};
-const INITIAL_FACILITY_INFO = {
-name: '로운주간이용센터',
-phone: '064-756-0205',
-facilityCode: '제2024-31105호'
-};
-const INITIAL_TEACHERS = ['임지현', '고은정', '이나라'];
-const INITIAL_PARTICIPANTS = [
-{ id: '1', name: '김민경', teacher: '임지현', age: 24, gender: '여', order: 1 },
-{ id: '2', name: '김인경', teacher: '임지현', age: 28, gender: '여', order: 2 },
-{ id: '3', name: '김수진', teacher: '임지현', age: 22, gender: '여', order: 3 },
-{ id: '4', name: '김승환', teacher: '임지현', age: 25, gender: '남', order: 4 },
-{ id: '5', name: '강주연', teacher: '고은정', age: 30, gender: '여', order: 5 },
-{ id: '6', name: '강승희', teacher: '고은정', age: 27, gender: '여', order: 6 },
-{ id: '7', name: '나은정', teacher: '고은정', age: 29, gender: '여', order: 7 },
-{ id: '8', name: '양애연', teacher: '고은정', age: 31, gender: '여', order: 8 }
-];
+const normalizeAccounts = (list) => Array.isArray(list) ? list : [];
 const PERSONAL_ACTIVITIES = [
 { key: 'study', label: '개별학습' },
 { key: 'tv', label: 'TV시청' },
@@ -1022,40 +992,14 @@ function NoteField({ value, onChange, label }) {
 }
 
 function App() {
-const [accounts, setAccounts] = useState(() => {
-const saved = localStorage.getItem('daycare_accounts');
-return normalizeAccounts(saved ? JSON.parse(saved) : INITIAL_ACCOUNTS);
-});
-const [facilityInfo, setFacilityInfo] = useState(() => {
-const saved = localStorage.getItem('daycare_facility_info');
-return saved ? JSON.parse(saved) : INITIAL_FACILITY_INFO;
-});
-const [currentAccount, setCurrentAccount] = useState(() => {
-try {
-  // 같은 컴퓨터·브라우저에서는 마지막 로그인 계정을 계속 기억합니다.
-  const rememberedCode = localStorage.getItem('daycare_remembered_account_code');
-  if (rememberedCode) {
-    const rememberedAccount = accounts.find(account => account.code === rememberedCode);
-    if (rememberedAccount) return rememberedAccount;
-  }
-  // 이전 버전에서 저장한 로그인 정보도 그대로 이어서 사용합니다.
-  const saved = localStorage.getItem('daycare_current_account');
-  return saved ? normalizeAccounts([JSON.parse(saved)])[0] : null;
-} catch (error) {
-  console.warn('저장된 로그인 정보를 불러오지 못했습니다.', error);
-  return null;
-}
-});
+const [accounts, setAccounts] = useState([]);
+const [facilityInfo, setFacilityInfo] = useState({});
+const [currentAccount, setCurrentAccount] = useState(null);
 const [inputCode, setInputCode] = useState('');
+const [accessKey, setAccessKey] = useState('');
 const [loginError, setLoginError] = useState('');
-const [teachers, setTeachers] = useState(() => {
-const saved = localStorage.getItem('daycare_teachers');
-return saved ? JSON.parse(saved) : INITIAL_TEACHERS;
-});
-const [participants, setParticipants] = useState(() => {
-const saved = localStorage.getItem('daycare_participants');
-return saved ? JSON.parse(saved) : INITIAL_PARTICIPANTS;
-});
+const [teachers, setTeachers] = useState([]);
+const [participants, setParticipants] = useState([]);
 const [selectedParticipantId, setSelectedParticipantId] = useState('1');
 const [teacherFilter, setTeacherFilter] = useState('전체');
 const participantScrollRef = React.useRef(null);
@@ -1097,10 +1041,7 @@ const [deleteConfirmTarget, setDeleteConfirmTarget] = useState(null);
 const [statsScope, setStatsScope] = useState('month');
 const [statsView, setStatsView] = useState('person');
 const [openStatusDate, setOpenStatusDate] = useState(null);
-const [checklistData, setChecklistData] = useState(() => {
-const saved = localStorage.getItem('daycare_checklists_v2');
-return saved ? JSON.parse(saved) : {};
-});
+const [checklistData, setChecklistData] = useState({});
 const [sharedReady, setSharedReady] = useState(false);
 const [sharedSyncing, setSharedSyncing] = useState(false);
 const [sharedSyncError, setSharedSyncError] = useState('');
@@ -1113,48 +1054,25 @@ const checklistDataRef = React.useRef(checklistData);
 const hasUnsavedChanges = !sharedReady || sharedPending || checklistDirtyRef.current || dirtyChecklistScopesRef.current.size > 0 || !!sharedSyncError;
 useEffect(() => {
   const warnBeforeLeaving = (event) => {
-    if (hasUnsavedChanges || checklistDirtyRef.current || dirtyChecklistScopesRef.current.size) {
+    if (currentAccount && (hasUnsavedChanges || checklistDirtyRef.current || dirtyChecklistScopesRef.current.size)) {
       event.preventDefault();
       event.returnValue = '';
     }
   };
   window.addEventListener('beforeunload', warnBeforeLeaving);
   return () => window.removeEventListener('beforeunload', warnBeforeLeaving);
-}, [hasUnsavedChanges]);
+}, [hasUnsavedChanges, currentAccount]);
 useEffect(() => { checklistDataRef.current = checklistData; }, [checklistData]);
-useEffect(() => {
-localStorage.setItem('daycare_accounts', JSON.stringify(accounts));
-}, [accounts]);
-useEffect(() => {
-localStorage.setItem('daycare_facility_info', JSON.stringify(facilityInfo));
-}, [facilityInfo]);
-useEffect(() => {
-localStorage.setItem('daycare_teachers', JSON.stringify(teachers));
-}, [teachers]);
-useEffect(() => {
-localStorage.setItem('daycare_participants', JSON.stringify(participants));
-}, [participants]);
-useEffect(() => {
-localStorage.setItem('daycare_checklists_v2', JSON.stringify(checklistData));
-}, [checklistData]);
-useEffect(() => {
-if (currentAccount) {
-localStorage.setItem('daycare_current_account', JSON.stringify(currentAccount));
-localStorage.setItem('daycare_remembered_account_code', currentAccount.code);
-} else {
-localStorage.removeItem('daycare_current_account');
-localStorage.removeItem('daycare_remembered_account_code');
-}
-}, [currentAccount]);
 // 최초 접속: 서버의 공용 데이터를 우선 적용합니다.
 useEffect(() => {
+  if (!currentAccount) return;
   let cancelled = false;
   (async () => {
     setSharedSyncing(true);
     try {
       const [remoteSettings, remoteChecklists] = await Promise.all([
-        sharedGet(SHARED_SETTINGS_KEY).catch(() => null),
-        sharedGet(SHARED_CHECKLISTS_KEY).catch(() => null)
+        sharedGet(SHARED_SETTINGS_KEY),
+        sharedGet(SHARED_CHECKLISTS_KEY)
       ]);
       if (cancelled) return;
       if (remoteSettings && typeof remoteSettings === 'object') {
@@ -1168,21 +1086,20 @@ useEffect(() => {
         checklistDirtyRef.current = false;
         lastChecklistLocalChangeRef.current = 0;
       }
-      sharedSkipSaveRef.current.settings = !!(remoteSettings && Object.keys(remoteSettings).length);
+      sharedSkipSaveRef.current.settings = true;
       sharedSkipSaveRef.current.checklists = !!(remoteChecklists && Object.keys(remoteChecklists).length);
       setSharedReady(true);
       setSharedPending(false);
       setSharedSyncError('');
     } catch (err) {
       console.error(err);
-      setSharedSyncError('공용 저장소에 연결하지 못했습니다. 이 컴퓨터의 임시 저장 데이터를 사용합니다.');
-      setSharedReady(true);
+      setSharedSyncError('공용 저장소에 연결하지 못했습니다.');
     } finally {
       if (!cancelled) setSharedSyncing(false);
     }
   })();
   return () => { cancelled = true; };
-}, []);
+}, [currentAccount]);
 
 // 설정 데이터가 변경되면 공용 저장소에 저장합니다.
 useEffect(() => {
@@ -1302,29 +1219,36 @@ setTimeout(() => {
 setToastMessage('');
 }, 2500);
 };
-const handleLogin = (e) => {
-if (e) e.preventDefault();
-const matched = accounts.find(a => a.code === inputCode.trim());
-if (matched) {
-setCurrentAccount(matched);
-setTeacherFilter('전체');
-setInputCode('');
-setLoginError('');
-showToast(`${matched.name}님 환영합니다.`);
-} else {
-setLoginError('올바른 접속 고유번호를 입력하세요.');
-}
+const handleLogin = async (e) => {
+  e.preventDefault();
+  try {
+    const response = await fetch('/api/login', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ code: inputCode.trim(), accessKey })
+    });
+    if (!response.ok) throw new Error('접속 고유번호와 센터 접속키를 확인해 주세요.');
+    setCurrentAccount(await response.json());
+    setTeacherFilter('전체');
+    setInputCode('');
+    setAccessKey('');
+    setLoginError('');
+  } catch (error) {
+    setLoginError(error.message);
+  }
 };
-const handleLogout = () => {
-if (hasUnsavedChanges) {
-  alert('아직 저장이 완료되지 않았습니다. 초록색 「저장 완료」 표시를 확인한 뒤 나가주세요.');
-  return;
-}
-localStorage.removeItem('daycare_current_account');
-localStorage.removeItem('daycare_remembered_account_code');
-setCurrentAccount(null);
-setInputCode('');
-setLoginError('');
+const handleLogout = async () => {
+  if (sharedReady && hasUnsavedChanges) {
+    alert('저장 완료 후 로그아웃해 주세요.');
+    return;
+  }
+  try {
+    const response = await fetch('/api/logout', { method: 'POST' });
+    if (!response.ok) throw new Error();
+    location.reload();
+  } catch {
+    showToast('로그아웃에 실패했습니다. 다시 시도해 주세요.');
+  }
 };
 const handleKeypadPress = (digit) => {
 if (inputCode.length < 6) {
@@ -1338,7 +1262,7 @@ setInputCode(prev => prev.slice(0, -1));
 const handleKeypadClear = () => {
 setInputCode('');
 };
-const monthDays = useMemo(() => {
+const calendarDays = useMemo(() => {
 const daysInMonth = new Date(year, month, 0).getDate();
 const daysArr = [];
 const dayNames = ['일', '월', '화', '수', '목', '금', '토'];
@@ -1346,7 +1270,7 @@ for (let d = 1; d <= daysInMonth; d++) {
 const dateObj = new Date(year, month - 1, d);
 const dayOfWeek = dateObj.getDay();
 const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
-if (hideWeekends && isWeekend) continue;
+
 const dayStr = String(d).padStart(2, '0');
 const monthStr = String(month).padStart(2, '0');
 const dateKey = `${year}-${monthStr}-${dayStr}`;
@@ -1360,7 +1284,8 @@ isToday
 });
 }
 return daysArr;
-}, [year, month, hideWeekends, today]);
+}, [year, month, today]);
+const monthDays = useMemo(() => hideWeekends ? calendarDays.filter(d => !d.isWeekend) : calendarDays, [calendarDays, hideWeekends]);
 const filteredParticipants = useMemo(() => {
 if (teacherFilter === '전체') return participants;
 return participants.filter(p => p.teacher === teacherFilter);
@@ -1441,7 +1366,7 @@ const handleRestoreBackup = () => {
   input.click();
 };
 const currentParticipant = useMemo(() => {
-return participants.find(p => p.id === selectedParticipantId) || participants[0] || { id: '1', name: '강승희', teacher: '김교사' };
+return participants.find(p => p.id === selectedParticipantId) || participants[0] || { id: '', name: '', teacher: '' };
 }, [participants, selectedParticipantId]);
 const monthKey = `${year}-${String(month).padStart(2, '0')}`;
 const currentMonthRecord = useMemo(() => {
@@ -1720,6 +1645,33 @@ const pRecord = checklistData[pId]?.[monthKey]?.days?.[todayKey];
 if (!pRecord) return false;
 if (pRecord.status === '결석' || pRecord.status === '미지원' || pRecord.status === '휴원') return true;
 return Object.values(pRecord.personal || {}).some(Boolean) || !!pRecord.oral || !!pRecord.meal;
+};
+const handleAttendanceExport = () => {
+  if (!participants.some(p => p.id === selectedParticipantId)) return;
+  const picker = document.createElement('input');
+  picker.type = 'file';
+  picker.accept = '.xlsx';
+  picker.onchange = async () => {
+    const template = picker.files[0];
+    if (!template) return;
+    try {
+      const buffer = await window.createAttendanceWorkbook({
+        template, name: currentParticipant.name, monthDays: calendarDays,
+        days: currentMonthRecord.days, viewTab, holidayName: getKoreanHolidayName
+      });
+      const url = URL.createObjectURL(new Blob([buffer], {
+        type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+      }));
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `출결_${currentParticipant.name}_${monthKey}.xlsx`;
+      link.click();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+    } catch (error) {
+      showToast(error.message || '출결 엑셀을 만들 수 없습니다.');
+    }
+  };
+  picker.click();
 };
 const handlePrint = () => {
 window.print();
@@ -2074,6 +2026,9 @@ return (
 <p className="text-xs text-slate-500 font-medium">개인지원 체크리스트 - 접속 고유번호 입력</p>
 </div>
 <form onSubmit={handleLogin} className="space-y-4">
+<label className="block text-sm font-bold">센터 접속키
+<input type="password" required autoComplete="current-password" className="block w-full mt-1 p-2 rounded border" value={accessKey} onChange={e => setAccessKey(e.target.value)} />
+</label>
 <div>
 <label className="block text-xs font-bold text-slate-600 mb-1.5 text-center">
 접속 고유번호 입력
@@ -2260,6 +2215,14 @@ title="이용인 및 교사 관리"
 >
 <IconSettings className="w-4 h-4" />
 <span className="hidden sm:inline">관리</span>
+</button>
+<button
+type="button"
+onClick={handleAttendanceExport}
+className="px-3 py-1.5 bg-[#172955] hover:bg-slate-700 text-white font-bold rounded-xl cursor-pointer"
+title="선택한 이용인의 월별 출결 엑셀 다운로드 · 업로드 양식 선택"
+>
+출결 엑셀
 </button>
 <button
 onClick={handlePrint}
