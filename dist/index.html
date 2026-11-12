@@ -692,7 +692,6 @@ input {height: 20px !important;padding: 2px 4px !important;font-size: 9px !impor
 </head>
 <body class="h-full bg-slate-100 text-slate-800 antialiased selection:bg-rose-500 selection:text-white">
 <div id="root"></div>
-<script src="/exceljs.min.js"></script>
 <script src="/attendance-export.js"></script>
 <script type="text/babel">
 const { useState, useEffect, useMemo } = React;
@@ -990,6 +989,28 @@ function NoteField({ value, onChange, label }) {
     <span ref={printRef} className="record-note-print">{value || ''}</span>
   </>;
 }
+
+let excelLibraryPromise;
+const loadExcelLibrary = () => {
+  if (window.ExcelJS) return Promise.resolve();
+  if (!excelLibraryPromise) {
+    excelLibraryPromise = new Promise((resolve, reject) => {
+      const script = document.createElement('script');
+      script.src = '/exceljs.min.js';
+      const fail = () => {
+        script.remove();
+        reject(new Error('엑셀 기능을 불러오지 못했습니다. 다시 시도해 주세요.'));
+      };
+      script.onload = () => window.ExcelJS ? resolve() : fail();
+      script.onerror = fail;
+      document.head.appendChild(script);
+    }).catch(error => {
+      excelLibraryPromise = undefined;
+      throw error;
+    });
+  }
+  return excelLibraryPromise;
+};
 
 function App() {
 const [accounts, setAccounts] = useState([]);
@@ -1667,6 +1688,7 @@ const handleAttendanceExport = () => {
     const template = picker.files[0];
     if (!template) return;
     try {
+      await loadExcelLibrary();
       const buffer = await window.createAttendanceWorkbook({
         template,
         participants: participants.map(({ id, name }) => ({
