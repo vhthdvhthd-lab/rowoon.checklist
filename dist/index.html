@@ -1647,7 +1647,7 @@ if (pRecord.status === '결석' || pRecord.status === '미지원' || pRecord.sta
 return Object.values(pRecord.personal || {}).some(Boolean) || !!pRecord.oral || !!pRecord.meal;
 };
 const handleAttendanceExport = () => {
-  if (!participants.some(p => p.id === selectedParticipantId)) return;
+  if (!sharedReady || !participants.length) return;
   const picker = document.createElement('input');
   picker.type = 'file';
   picker.accept = '.xlsx';
@@ -1656,15 +1656,18 @@ const handleAttendanceExport = () => {
     if (!template) return;
     try {
       const buffer = await window.createAttendanceWorkbook({
-        template, name: currentParticipant.name, monthDays: calendarDays,
-        days: currentMonthRecord.days, viewTab, holidayName: getKoreanHolidayName
+        template,
+        participants: participants.map(({ id, name }) => ({
+          name, days: checklistData[id]?.[monthKey]?.days || {}
+        })),
+        monthDays: calendarDays, viewTab, holidayName: getKoreanHolidayName
       });
       const url = URL.createObjectURL(new Blob([buffer], {
         type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
       }));
       const link = document.createElement('a');
       link.href = url;
-      link.download = `출결_${currentParticipant.name}_${monthKey}.xlsx`;
+      link.download = `출결_전체이용인_${monthKey}.xlsx`;
       link.click();
       setTimeout(() => URL.revokeObjectURL(url), 1000);
     } catch (error) {
@@ -2220,7 +2223,7 @@ title="이용인 및 교사 관리"
 type="button"
 onClick={handleAttendanceExport}
 className="px-3 py-1.5 bg-[#172955] hover:bg-slate-700 text-white font-bold rounded-xl cursor-pointer"
-title="선택한 이용인의 월별 출결 엑셀 다운로드 · 업로드 양식 선택"
+title="전체 이용인의 월별 출결 엑셀 다운로드 · 업로드 양식 선택"
 >
 출결 엑셀
 </button>
