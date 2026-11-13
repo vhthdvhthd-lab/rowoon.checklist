@@ -6,7 +6,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>체크리스트 관리 시스템</title>
 <script>
-window.initialSessionRequest = fetch('/api/session', { cache: 'no-store' }).catch(() => null);
+window.initialSessionRequest = fetch('/api/session?includeData=1', { cache: 'no-store' }).catch(() => null);
 </script>
 <script src="https://cdn.tailwindcss.com"></script>
 <script>
@@ -1022,12 +1022,17 @@ const [currentAccount, setCurrentAccount] = useState(null);
 const [inputCode, setInputCode] = useState('');
 const [accessKey, setAccessKey] = useState('');
 const [rememberDevice, setRememberDevice] = useState(false);
+const loginDataRef = React.useRef(null);
 const [restoringSession, setRestoringSession] = useState(true);
 useEffect(() => {
   let active = true;
   window.initialSessionRequest
     .then(response => response?.ok ? response.json() : null)
-    .then(identity => { if (active && identity) setCurrentAccount(identity); })
+    .then(payload => {
+      if (!active || !payload) return;
+      loginDataRef.current = payload.identity ? payload : null;
+      setCurrentAccount(payload.identity ?? payload);
+    })
     .catch(() => {})
     .finally(() => { if (active) setRestoringSession(false); });
   return () => { active = false; };
@@ -1099,7 +1104,6 @@ useEffect(() => {
   return () => window.removeEventListener('beforeunload', warnBeforeLeaving);
 }, [hasUnsavedChanges, currentAccount]);
 useEffect(() => { checklistDataRef.current = checklistData; }, [checklistData]);
-const loginDataRef = React.useRef(null);
 // 최초 접속: 서버의 공용 데이터를 우선 적용합니다.
 useEffect(() => {
   if (!currentAccount) return;
@@ -2091,6 +2095,9 @@ const globalStats = useMemo(() => {
 
 const displayStats = statsView === 'all' ? globalStats : extendedStats;
 
+if (currentAccount && !sharedReady) {
+  return <p role="status" className="p-6 text-center">{sharedSyncError || '체크리스트 불러오는 중…'}</p>;
+}
 if (restoringSession) return <p role="status" className="p-6 text-center">로그인 상태 확인 중…</p>;
 if (!currentAccount) {
 return (

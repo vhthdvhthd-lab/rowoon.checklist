@@ -107,7 +107,14 @@ export default { async fetch(request, env) {
       }
       const identity = await readSession(request, env.DB, env.ROWOON_ACCESS_KEY);
       if (!identity) return json({ error: 'Unauthorized' }, 401);
-      if (url.pathname === '/api/session' && request.method === 'GET') return json(identity);
+      if (url.pathname === '/api/session' && request.method === 'GET') {
+        if (url.searchParams.get('includeData') !== '1') return json(identity);
+        const [settingsResponse, checklists] = await Promise.all([
+          handleData(request, env, new URL('/api/data?key=settings', url)),
+          readChecklists(env.DB)
+        ]);
+        return json({ identity, settings: await settingsResponse.json(), checklists });
+      }
       if (url.pathname === '/api/attendance-template') {
         if (request.method === 'GET') {
           const row = await env.DB.prepare("SELECT value FROM checklist_state WHERE key = 'attendance-template'").first();
