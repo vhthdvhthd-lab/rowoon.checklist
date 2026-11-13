@@ -5,6 +5,9 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>체크리스트 관리 시스템</title>
+<script>
+window.initialSessionRequest = fetch('/api/session', { cache: 'no-store' }).catch(() => null);
+</script>
 <script src="https://cdn.tailwindcss.com"></script>
 <script>
 tailwind.config = {
@@ -1022,8 +1025,8 @@ const [rememberDevice, setRememberDevice] = useState(false);
 const [restoringSession, setRestoringSession] = useState(true);
 useEffect(() => {
   let active = true;
-  fetch('/api/session', { cache: 'no-store' })
-    .then(response => response.ok ? response.json() : null)
+  window.initialSessionRequest
+    .then(response => response?.ok ? response.json() : null)
     .then(identity => { if (active && identity) setCurrentAccount(identity); })
     .catch(() => {})
     .finally(() => { if (active) setRestoringSession(false); });
